@@ -11,4 +11,5 @@ class StandardAnalyzer(BaseAnalyzer):
         super().__init__(config)
 
     def analyze(self, query):
+        query = query.lower()
         return super().analyze(query)
