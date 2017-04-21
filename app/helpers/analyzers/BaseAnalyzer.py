@@ -8,7 +8,8 @@ from nltk.tokenize import word_tokenize
 
 
 class BaseAnalyzer:
-    def __init__(self, config):
+    def __init__(self, config={}):
         self.config = config
 
     def analyze(self, query):
+        return word_tokenize(query)
