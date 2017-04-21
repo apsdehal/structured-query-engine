@@ -7,7 +7,6 @@ class Flattener:
 
         for i in mapping:
             self.flattened_mapping[i] = self.flattenMapping(mapping[i])
-        return
 
     def flattenMapping(self, config_mapping):
         mapping = copy.deepcopy(config_mapping)
@@ -29,4 +28,27 @@ class Flattener:
                 out[name[:-1]] = x
 
         flatten(mapping)
+        return out
+
+    def flatten(self, doc_type, doc):
+        current_type_mapping = self.flattened_mapping.get(doc_type, None)
+
+        if not current_type_mapping:
+            raise ValueError(type + " not found in mapping")
+
+        out = {}
+
+        def flatten(x, name=''):
+            if type(x) is dict:
+                for a in x:
+                    flatten(x[a], name + a + '.')
+            else:
+                out[name[:-1]] = x
+
+        flatten(doc)
+
+        for key in list(out):
+            if not current_type_mapping.get(key, None):
+                out.pop(key, None)
+
         return out

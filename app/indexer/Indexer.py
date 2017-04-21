@@ -8,8 +8,8 @@ class Indexer:
         self.flattener = Flattener(self.mapping)
         return
 
-    def add(self, doc):
-        flattened = self.flattener.flatten(doc)
+    def add(self, doc_type, doc):
+        flattened = self.flattener.flatten(doc_type, doc)
         inverted_index = self.tokenizer.tokenizeFlattened(flattened)
         self.generate(doc, inverted_index)
 
