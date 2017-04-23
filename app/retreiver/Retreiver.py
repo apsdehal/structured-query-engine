@@ -1,5 +1,5 @@
 import json
-from helpers import StandardAnalyzer
+import app.utils.General as utils
 from nltk.tokenize import RegexpTokenizer
 
 class Retreiver:
@@ -93,9 +93,8 @@ class Retreiver:
             if query_type == TERM_QUERY:
                 query_tokens = [query_string.lower()]
             else :
-                analyzer = mapping[field]['movie']['properties'].get('analyzer',STANDARD_ANALYZER)
-                if analyzer == self.STANDARD_ANALYZER:
-                    tokenizer = StandardAnalyzer()
+                analyzer_type = mapping[field]['movie']['properties'].get('analyzer',STANDARD_ANALYZER)
+                tokenizer = utils.getAnalyzer(analyzer_type)
                 query_tokens = tokenizer.tokenize(query_string.lower())
 
             query_vector = {}
@@ -108,7 +107,11 @@ class Retreiver:
                 if token in query_vector:
                     continue
                 query_vector[token] = 1.0*(self.config.term_inv_doc_freq.get(token,1.0))
-                tf_list = self.config.tf_list.get(token,[])
+                try:
+                    tf_list = self.config.tf_list[field].get(token,[])
+                except KeyError:
+                    print('field {0} doesnt exist in tf_list'.format(field))
+                    break
                 for doc_id,freq in tf_list:
                     if doc_id in document_vectors:
                         inner_dict = document_vectors[doc_id]
