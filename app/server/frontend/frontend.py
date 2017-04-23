@@ -12,6 +12,7 @@ def startFrontend(config):
     application = web.Application([
         (r"/", InfoHandler),
         (r"/([^/]+)", IndexHandler),
+        (r"/([^/]+)/([^/]+)", IndexQueryHandler)
         (r"/([^/]+)/([^/]+)/([^/]+)", IndexQueryHandler)
     ])
 
