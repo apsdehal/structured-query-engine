@@ -31,7 +31,6 @@ class Tokenizer:
 
             if type(doc[key]) is not list:
                 doc[key] = [doc[key]]
-
             out[key] = []
             analyzer = utils.getAnalyzer(analyzer_type)
             for val in doc[key]:
@@ -40,5 +39,4 @@ class Tokenizer:
                 else:
                     out[key].append(analyzer.analyze(val))
 
-        print(out)
         return out
