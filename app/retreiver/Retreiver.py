@@ -11,18 +11,15 @@ class Retreiver:
         self.config = config
         return
 
+
     def dot_product(self, vector1, vector2):
         result = 0
         for key,value in vector1.items():
             result = result + value*vector2.get(key,0)
         return result
 
-    def query(self, index_name, type_name, q):
-        try:
-            data = q['query']
-        except KeyError:
-            print('invalid query')
-            return
+
+    def process_query(self, data):
         if self.TERM_QUERY in data:
             items = data[self.TERM_QUERY].items()
             if len(items) > 1:
@@ -87,9 +84,22 @@ class Retreiver:
         else:
             print('unknown query type')
             return
+        return fields, query_strings, query_type
 
-        with open(self.config['mapping_path']) as handler:    
-            mapping = json.load(handler)
+
+    def query(self, index_name, type_name, q):
+        try:
+            data = q['query']
+        except KeyError:
+            print('invalid query')
+            return
+        try:
+            fields, query_strings, query_type = self.process_query(data)
+        except TypeError:
+            print('Exception occured while processing query')
+            return
+
+        mapping = self.config[index_name]['mapping']
 
         scores = {}
 
@@ -109,20 +119,21 @@ class Retreiver:
                 #if query contains a word twice then it will be ignored second time
                 if token in query_vector:
                     continue
-                query_url = '/'.join([config['idf_server_url'], index_name, type_name, token])
-                self.term_inv_doc_freq = float(requests.get(query_url))
-                query_vector[token] = 1.0 * self.term_inv_doc_freq
-                query_url = '/'.join([config['index_server_url'], index_name, type_name, field, token])
-                tf_list = json.loads(requests.get(query_url))['postings']
-                # tf_list = self.config['tf_list'][field].get(token,[])
-                for doc_id,freq in tf_list:
-                    if doc_id in document_vectors:
-                        inner_dict = document_vectors[doc_id]
-                        inner_dict[token] = freq * self.term_inv_doc_freq
-                    else:
-                        inner_dict = {}
-                        inner_dict[token] = freq * self.term_inv_doc_freq
-                        document_vectors[doc_id] = inner_dict
+                for index_server_url, idf_server_url in zip(self.config['index_server_url'], self.config['idf_server_url']):
+                    query_url = '/'.join([idf_server_url, index_name, type_name, token])
+                    self.term_inv_doc_freq = float(requests.get(query_url))
+                    query_vector[token] = 1.0 * self.term_inv_doc_freq
+                    query_url = '/'.join([index_server_url, index_name, type_name, field, token])
+                    tf_list = json.loads(requests.get(query_url))['postings']
+                    # tf_list = self.config['tf_list'][field].get(token,[])
+                    for doc_id,freq in tf_list:
+                        if doc_id in document_vectors:
+                            inner_dict = document_vectors[doc_id]
+                            inner_dict[token] = freq * self.term_inv_doc_freq
+                        else:
+                            inner_dict = {}
+                            inner_dict[token] = freq * self.term_inv_doc_freq
+                            document_vectors[doc_id] = inner_dict
 
             for doc_id, document_vector in document_vectors.items():
                 score = self.dot_product(document_vector,query_vector)
