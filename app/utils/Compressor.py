@@ -1,11 +1,14 @@
+import snappy
+
+
 class Compressor:
     def __init__(self):
         return
 
     def compress(self, str):
         # Compress str here
-        return str
+        return snappy.compress(str)
 
     def decompress(self, str):
         # Decompress str here
-        return str
+        return snappy.decompress(str)
