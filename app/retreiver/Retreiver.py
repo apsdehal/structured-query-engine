@@ -5,9 +5,9 @@ from nltk.tokenize import RegexpTokenizer
 class Retreiver:
     def __init__(self, config):
         self.STANDARD_ANALYZER = 'standard'
-        self.TERM_QUERY = 'term_query'
-        self.MATCH_QUERY = 'match_query'
-        self.BOOL_QUERY = 'bool_query'
+        self.TERM_QUERY = 'term'
+        self.MATCH_QUERY = 'match'
+        self.BOOL_QUERY = 'bool'
         self.config = config
         return
 
@@ -19,24 +19,67 @@ class Retreiver:
 
     def query(self, q):
         data = json.loads(q)['query']
-        if 'term' in data:
-            items = data['term'].items()
+        if TERM_QUERY in data:
+            items = data[TERM_QUERY].items()
             if len(items) > 1:
                 print('[term] query doesnt support multiple fields')
                 return
-            [(f,query_string)] = items
+            [(f,q)] = items
             fields = [f]
+            query_strings = [q]
             query_type = TERM_QUERY
-        elif 'match' in data:
-            items = data['match'].items()
+        elif MATCH_QUERY in data:
+            items = data[MATCH_QUERY].items()
             if len(items) > 1:
                 print('[match] query doesnt support multiple fields')
                 return
-            [(f,query_string)] = items
+            [(f,q)] = items
             fields = [f]
+            query_strings = [q]
             query_type = MATCH_QUERY
-        elif 'bool' in data:
-            # do something
+        elif BOOL_QUERY in data:
+            items = data[BOOL_QUERY].items()
+            must_items = items.get('must',[])
+            must_not_items = items.get('must_not',[])
+            should_items = items.get('should',[])
+            range_items = items.get('range',[])
+
+            # should query
+            should_fields = []
+            should_field_querys = []
+            if len(should_items) == 0 :
+                should_query = None
+            else :
+                for should_item in should_items :
+                    if len(should_item[MATCH_QUERY].items()) > 1:
+                        print('[match] query doesnt support multiple fields')
+                        return
+                    [(f,q)] = should_item[MATCH_QUERY].items()
+                    should_fields.append(f)
+                    should_field_querys.append(q)
+
+            # must query
+            must_fields = []
+            must_field_querys = []
+            if len(must_items) == 0 :
+                must_query = None
+            else :
+                for must_item in must_items :
+                    if len(must_item[MATCH_QUERY].items()) > 1:
+                        print('[match] query doesnt support multiple fields')
+                        return
+                    [(f,q)] = must_item[MATCH_QUERY].items()
+                    must_fields.append(f)
+                    must_field_querys.append(q)
+
+            # only implementing "should" for now
+            fields = []
+            query_strings = []
+            for f,q in zip(should_fields,should_field_querys):
+                fields.append(f)
+                query_strings.append(q)
+
+            query_type = BOOL_QUERY
         else:
             print('unknown query type')
             return
@@ -46,14 +89,14 @@ class Retreiver:
 
         scores = {}
 
-        for field in fields:
-            if query_type != TERM_QUERY:
+        for field,query_string in zip(fields,query_strings):
+            if query_type == TERM_QUERY:
+                query_tokens = [query_string.lower()]
+            else :
                 analyzer = mapping[field]['movie']['properties'].get('analyzer',STANDARD_ANALYZER)
                 if analyzer == self.STANDARD_ANALYZER:
                     tokenizer = StandardAnalyzer()
                 query_tokens = tokenizer.tokenize(query_string.lower())
-            else :
-                query_tokens = query_string
 
             query_vector = {}
             document_vectors = {}
