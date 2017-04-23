@@ -3,3 +3,7 @@
 *.pyc
 __pycache__
 *.txt
+*test.py
+*.idf
+*.ds
+*.tf
