@@ -1,6 +1,6 @@
 import json
 import app.utils.General as utils
-from nltk.tokenize import RegexpTokenizer
+import requests
 
 class Retreiver:
     def __init__(self, config):
@@ -17,7 +17,7 @@ class Retreiver:
             result = result + value*vector2.get(key,0)
         return result
 
-    def query(self, q):
+    def query(self, index_name, type_name, q):
         try:
             data = q['query']
         except KeyError:
@@ -109,19 +109,19 @@ class Retreiver:
                 #if query contains a word twice then it will be ignored second time
                 if token in query_vector:
                     continue
-                query_vector[token] = 1.0*(self.config['term_inv_doc_freq'].get(token,1.0))
-                try:
-                    tf_list = self.config['tf_list'][field].get(token,[])
-                except KeyError:
-                    print('field {0} doesnt exist in tf_list'.format(field))
-                    break
+                query_url = '/'.join([config['idf_server_url'], index_name, type_name, token])
+                self.term_inv_doc_freq = float(requests.get(query_url))
+                query_vector[token] = 1.0 * self.term_inv_doc_freq
+                query_url = '/'.join([config['index_server_url'], index_name, type_name, field, token])
+                tf_list = json.loads(requests.get(query_url))['postings']
+                # tf_list = self.config['tf_list'][field].get(token,[])
                 for doc_id,freq in tf_list:
                     if doc_id in document_vectors:
                         inner_dict = document_vectors[doc_id]
-                        inner_dict[token] = freq*(self.config['term_inv_doc_freq'].get(token,1))
+                        inner_dict[token] = freq * self.term_inv_doc_freq
                     else:
                         inner_dict = {}
-                        inner_dict[token] = freq*(self.config['term_inv_doc_freq'].get(token,1))
+                        inner_dict[token] = freq * self.term_inv_doc_freq
                         document_vectors[doc_id] = inner_dict
 
             for doc_id, document_vector in document_vectors.items():
