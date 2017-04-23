@@ -2,19 +2,12 @@ import json
 from helpers import StandardAnalyzer
 from nltk.tokenize import RegexpTokenizer
 
-### typical query structure ###
-### {
-###     "query": {
-###         "query_string" : {
-###             "fields" : ["field_1", "field_2"],
-###             "query" : "this AND that OR thus",
-###         }
-###     }
-### }
-
 class Retreiver:
     def __init__(self, config):
         self.STANDARD_ANALYZER = 'standard'
+        self.TERM_QUERY = 'term_query'
+        self.MATCH_QUERY = 'match_query'
+        self.BOOL_QUERY = 'bool_query'
         self.config = config
         return
 
@@ -25,9 +18,28 @@ class Retreiver:
         return result
 
     def query(self, q):
-        data = json.loads(q)
-        fields = data['query']['query_string']['fields']
-        query_string = data['query']['query_string']['query']
+        data = json.loads(q)['query']
+        if 'term' in data:
+            items = data['term'].items()
+            if len(items) > 1:
+                print('[term] query doesnt support multiple fields')
+                return
+            [(f,query_string)] = items
+            fields = [f]
+            query_type = TERM_QUERY
+        elif 'match' in data:
+            items = data['match'].items()
+            if len(items) > 1:
+                print('[match] query doesnt support multiple fields')
+                return
+            [(f,query_string)] = items
+            fields = [f]
+            query_type = MATCH_QUERY
+        elif 'bool' in data:
+            # do something
+        else:
+            print('unknown query type')
+            return
 
         with open(self.config.mapping_path) as handler:    
             mapping = json.load(handler)
@@ -35,10 +47,13 @@ class Retreiver:
         scores = {}
 
         for field in fields:
-            analyzer = mapping[field]['movie']['properties'].get('analyzer',STANDARD_ANALYZER)
-            if analyzer == self.STANDARD_ANALYZER:
-                tokenizer = StandardAnalyzer()
-            query_tokens = tokenizer.tokenize(query_string.lower())
+            if query_type != TERM_QUERY:
+                analyzer = mapping[field]['movie']['properties'].get('analyzer',STANDARD_ANALYZER)
+                if analyzer == self.STANDARD_ANALYZER:
+                    tokenizer = StandardAnalyzer()
+                query_tokens = tokenizer.tokenize(query_string.lower())
+            else :
+                query_tokens = query_string
 
             query_vector = {}
             document_vectors = {}
