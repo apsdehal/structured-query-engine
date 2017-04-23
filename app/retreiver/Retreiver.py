@@ -16,7 +16,6 @@ class Retreiver:
     def __init__(self, config):
         self.STANDARD_ANALYZER = 'standard'
         self.config = config
-        self.MAX_ITEMS_RETURNED = 10
         return
 
     def dot_product(self, vector1, vector2):
@@ -69,6 +68,5 @@ class Retreiver:
             posting_list.append([doc_id,score])
 
         posting_list.sort(key=lambda tup: tup[1],reverse=True)
-        json_output['postings'] = posting_list[:self.MAX_ITEMS_RETURNED]
-        self.write(json.dumps(json_output))
+        return posting_list
 
