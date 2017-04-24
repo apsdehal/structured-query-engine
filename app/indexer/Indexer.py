@@ -1,5 +1,6 @@
 import json
 import pickle
+import os
 from collections import Counter
 from collections import defaultdict
 from indexer.Flattener import Flattener
@@ -27,7 +28,7 @@ class Indexer:
 
     def __init__(self, config, index):
         self.config = config
-        self.flattener = Flattener(config[index]["mappings"])
+        self.flattener = Flattener(config["indices"][index]["mappings"])
         self.mapping = self.flattener.getFlattenedMapping()
         self.tokenizer = Tokenizer(config, self.flattener.getFlattenedMapping())
         self.compressor = Compressor()
@@ -36,8 +37,8 @@ class Indexer:
         self.index = index
         self.index_doc_type = set()
         self.del_docs = []
-        self.number_of_shards = config[index]["settings"]["number_of_shards"]
-        return
+        self.dir_path = os.path.join(self.config["indices_path"], self.index)
+        self.number_of_shards = config["indices"][index]["settings"]["index"]["number_of_shards"]
 
     def update(self, doc_type, doc_id, doc):
         deleted = self.delete(doc_type, doc_id)
@@ -149,6 +150,11 @@ class Indexer:
 
         self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)][doc_id] = doc
 
+    def get_doc(self, doc_type, doc_id):
+        doc_id = int(doc_id)
+        return self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)].get(doc_id, {})
+
+
     def degenerate(self):
         for doc_type, doc_id in self.del_docs:
             doc = self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)][doc_id]
@@ -187,11 +193,11 @@ class Indexer:
 
     def flush_to_file(self):
         self.degenerate()
-
         for i in self.tfTable:
             for j in self.tfTable[i]:
                 for k in range(self.number_of_shards):
                     file_name = i + "_" + j + "_" + str(k) + ".tf"
+                    file_name = os.path.join(self.dir_path, file_name)
                     print(file_name)
                     # print(self.tfTable[i][j][k])
                     with open(file_name, 'wb') as f:
@@ -210,6 +216,7 @@ class Indexer:
                 for k in range(self.number_of_shards):
                     file_name = i + "_" + j + "_" + str(k) + ".ds"
                     print(file_name)
+                    file_name = os.path.join(self.dir_path, file_name)
                     # print(self.document_store[i][j][k])
                     with open(file_name, 'wb') as f:
                         f.write(self.compressor.compress(json.dumps(self.document_store[i][j][k]).encode()))
