@@ -3,8 +3,8 @@ import tornado.web
 import socket
 import logging
 import json
-from app.retreiver.Retreiver import Retreiver
-from app.indexer.Indexer import Indexer
+from retreiver.Retreiver import Retreiver
+from indexer.Indexer import Indexer
 from tornado.httpclient import AsyncHTTPClient
 from tornado import gen, process
 

@@ -14,9 +14,9 @@ class InfoHandler(tornado.web.RequestHandler):
 
     def get(self):
         data = {}
-        data["name"] = config["name"]
-        data["cluster_name"] = config["cluster_name"]
-        data["cluster_uuid"] = config["cluster_uuid"]
-        data["tagline"] = "You know for structured search"
+        data["name"] = self.config["name"]
+        data["cluster_name"] = self.config["cluster_name"]
+        data["cluster_uuid"] = self.config["cluster_uuid"]
+        data["tagline"] = "You know, for structured search"
 
         self.write(json.dumps(data))

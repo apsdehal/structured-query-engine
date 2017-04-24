@@ -1,4 +1,4 @@
-import app.utils.General as utils
+import helpers.utils.General as utils
 
 
 class Tokenizer:

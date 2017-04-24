@@ -1,18 +1,17 @@
-from app.helpers.utils.Bootstrapper import Bootstrapper
-import app.server.frontend.frontend as frontend
-import app.server.indexserver.indexserver as indexserver
-import app.server.docserver.docserver as docserver
-import app.server.idfserver.idfserver as idfserver
+from helpers.utils.Bootstrapper import Bootstrapper
+import server.frontend.frontend as frontend
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def main():
     bootstrapper = Bootstrapper()
     config = bootstrapper.bootstrap()
-    docserver.start(config)
-    indexserver.start(config)
-    idfserver.start(config)
     frontend.start(config)
 
 
 if __name__ == '__main__':
+    logging.basicConfig(format='%(levelname)s - %(asctime)s - %(message)s',
+                        level=logging.DEBUG)
     main()

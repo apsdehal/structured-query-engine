@@ -1,5 +1,5 @@
 import os
-from app.helpers.utils.Compressor import Compressor
+from helpers.utils.Compressor import Compressor
 
 compressor = Compressor()
 

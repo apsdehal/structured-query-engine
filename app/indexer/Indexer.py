@@ -2,9 +2,9 @@ import json
 import pickle
 from collections import Counter
 from collections import defaultdict
-from app.indexer.Flattener import Flattener
-from app.indexer.Tokenizer import Tokenizer
-from app.utils.Compressor import Compressor
+from indexer.Flattener import Flattener
+from indexer.Tokenizer import Tokenizer
+from helpers.utils.Compressor import Compressor
 
 class AutoVivification(dict):
     """Implementation of perl's autovivification feature."""
@@ -32,8 +32,8 @@ class Indexer:
         self.index = index
         self.index_doc_type = set()
         return
-        
-        
+
+
 
     def add(self, doc_type, doc):
 
@@ -46,7 +46,7 @@ class Indexer:
                     self.tfTable[self.index][doc_type] = [defaultdict(lambda : defaultdict(list)) for x in range(self.config['num_shards'])]
                     self.idfTable[self.index][doc_type][field] = defaultdict(int)
             self.index_doc_type.add(doc_type)
-            
+
         self.num_docs += 1
         flattened = self.flattener.flatten(doc_type, doc)
         #print(flattened)
@@ -69,14 +69,14 @@ class Indexer:
     def generate_index_number(self, doc_id):
         self.index_number = doc_id % self.config['num_shards']
 
-    def generate_inverted_index(self, doc_id, doc_type, ii):        
+    def generate_inverted_index(self, doc_id, doc_type, ii):
 
         for field in self.mapping[doc_type]['properties']:
             if(self.mapping[doc_type]['properties'][field].get('index',True)):
                 movie_field = ii[field]
                 if(all(isinstance(elem, list) for elem in movie_field)):
                     movie_field = [item for sublist in movie_field for item in sublist]
-                
+
                 dictionary = Counter(movie_field)
 
                 for key in dictionary:
@@ -99,7 +99,7 @@ class Indexer:
         return
 
     def generate_doc_store(self, doc_id, doc_type, ii):
-        self.document_store[self.index][doc_type][self.index_number][doc_id] = ii 
+        self.document_store[self.index][doc_type][self.index_number][doc_id] = ii
         return
 
     def flush_to_file(self):
@@ -113,7 +113,7 @@ class Indexer:
                         pickle.dump(self.compressor.compress(json.dumps(self.tfTable[i][j][k]).encode()), f)
 
         for i in self.idfTable:
-            for j in self.idfTable[i]:                
+            for j in self.idfTable[i]:
                 file_name = i+"_"+j+".idf"
                 print(file_name)
                 print(self.idfTable[i][j])
@@ -121,8 +121,8 @@ class Indexer:
                     pickle.dump(self.compressor.compress(json.dumps(self.idfTable[i][j]).encode()), f)
 
         for i in self.document_store:
-            for j in self.document_store[i]:  
-                for k in range(self.config['num_shards']): 
+            for j in self.document_store[i]:
+                for k in range(self.config['num_shards']):
                     file_name = i+"_"+j+"_"+str(k)+".ds"
                     print(file_name)
                     print(self.document_store[i][j][k])

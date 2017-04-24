@@ -1,5 +1,5 @@
 import json
-import app.helpers.utils.General as utils
+import helpers.utils.General as utils
 import requests
 
 
