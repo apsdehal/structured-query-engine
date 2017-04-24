@@ -1,4 +1,5 @@
 import os
+import json
 from helpers.utils.Compressor import Compressor
 
 compressor = Compressor()
@@ -30,11 +31,11 @@ def loadDocStoreAndInvertedIndex(index_name, num_shards, config, mapping):
             type_file_path = "%s_%s_%s.tf" % (index_name, type_name, i)
             type_file_path = os.path.join(file_path, type_file_path)
             with open(type_file_path, "rb") as f:
-                inverted_indices[type_name].append(compressor.decompress(f.read()))
+                inverted_indices[type_name].append(json.loads(compressor.decompress(f.read()).decode()))
 
             type_file_path = "%s_%s_%s.ds" % (index_name, type_name, i)
             type_file_path = os.path.join(file_path, type_file_path)
             with open(type_file_path, "rb") as f:
-                document_stores[type_name].append(compressor.decompress(f.read()))
+                document_stores[type_name].append(json.loads(compressor.decompress(f.read()).decode()))
 
     return document_stores, inverted_indices

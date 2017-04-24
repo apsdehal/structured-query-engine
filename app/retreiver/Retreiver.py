@@ -106,11 +106,11 @@ class Retreiver:
 
         for doc_id, score in posting_list[:self.NUM_RESULTS_TO_RETURN]:
             max_score = max(score,max_score)
-            shard_num = doc_id % self.number_of_shards
+            shard_num = int(doc_id) % self.number_of_shards
             doc = {}
             doc['_index'] = self.index_name
             doc['_type'] = type_name
-            doc['_source'] = self.doc_stores[type_name][self.index_name][type_name][shard_num][doc_id]
+            doc['_source'] = self.doc_stores[type_name][shard_num][doc_id]
             doc['_score'] = score
             doc['_id'] = doc_id
             hits.append(doc)
@@ -152,12 +152,15 @@ class Retreiver:
                 if token in query_vector:
                     continue
                 for i in range(self.number_of_shards):
-                    query_vector[token] = 1.0 * self.term_inv_doc_freq
-                    tf_dict = self.inverted_indices[type_name][self.index_name][type_name][i][field].get(token, {})
+                    tf_dict = self.inverted_indices[type_name][i][field].get(token, {})
 
-                    total_docs = float(self.doc_stores[type_name][self.index_name][type_name][i]['num_docs'])
+                    if len(tf_dict) == 0:
+                        continue
+
+                    total_docs = float(self.doc_stores[type_name][i]['num_docs'])
                     self.term_inv_doc_freq = math.log(total_docs / tf_dict['num_docs'])
-                    my_dict.pop('num_docs', None)
+                    query_vector[token] = 1.0 * self.term_inv_doc_freq
+                    tf_dict.pop('num_docs', None)
 
                     for doc_id, freq in tf_dict.items():
                         if doc_id in document_vectors:
