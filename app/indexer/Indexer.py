@@ -37,19 +37,12 @@ class Indexer:
 
     def update(self, doc_type, doc_id, doc):
 
-
-        
-
-        
-
-        # self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)][self.new_doc_id] = doc
-        
-
         deleted = self.delete(doc_type, doc_id)
 
         self.degenerate()
         
         doc_updated = self.add(doc_type, doc, doc_id, True)
+
         print(doc_id,' updated')
 
         return doc_updated
@@ -179,6 +172,8 @@ class Indexer:
             inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
             self.degenerate_inverted_index(doc_id, doc_type, inverted_index)
             self.degenerate_doc_store(doc_id, doc_type, doc)
+
+        self.del_docs = []
 
     def degenerate_inverted_index(self, doc_id, doc_type, ii):
         for field in self.mapping[doc_type]['properties']:
