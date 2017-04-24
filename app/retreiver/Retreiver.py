@@ -29,7 +29,7 @@ class Retreiver:
         if self.TERM_QUERY in data:
             items = data[self.TERM_QUERY].items()
             if len(items) > 1:
-                print('[term] query doesnt support multiple fields')
+                raise Exception('[term] query doesnt support multiple fields')
                 return
             [(f, q)] = items
             fields = [f]
@@ -38,7 +38,7 @@ class Retreiver:
         elif self.MATCH_QUERY in data:
             items = data[self.MATCH_QUERY].items()
             if len(items) > 1:
-                print('[match] query doesnt support multiple fields')
+                raise Exception('[match] query doesnt support multiple fields')
                 return
             [(f, q)] = items
             fields = [f]
@@ -59,7 +59,7 @@ class Retreiver:
             else:
                 for should_item in should_items:
                     if len(should_item[self.MATCH_QUERY].items()) > 1:
-                        print('[match] query doesnt support multiple fields')
+                        raise Exception('[match] query doesnt support multiple fields')
                         return
                     [(f, q)] = should_item[self.MATCH_QUERY].items()
                     should_fields.append(f)
@@ -73,7 +73,7 @@ class Retreiver:
             else:
                 for must_item in must_items:
                     if len(must_item[self.MATCH_QUERY].items()) > 1:
-                        print('[match] query doesnt support multiple fields')
+                        raise Exception('[match] query doesnt support multiple fields')
                         return
                     [(f, q)] = must_item[self.MATCH_QUERY].items()
                     must_fields.append(f)
@@ -88,7 +88,7 @@ class Retreiver:
 
             query_type = self.BOOL_QUERY
         else:
-            print('unknown query type')
+            raise Exception('unknown query type')
             return
         return fields, query_strings, query_type
 
@@ -120,12 +120,12 @@ class Retreiver:
         try:
             data = q['query']
         except KeyError:
-            print('invalid query')
+            raise KeyError("invalid query, 'query' key not present in passed parameter")
             return
         try:
             fields, query_strings, query_type = self.process_query(data)
         except TypeError:
-            print('Exception occured while processing query')
+            raise TypeError("Exception occured while processing query")
             return
 
         scores = {}
