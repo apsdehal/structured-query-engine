@@ -2,6 +2,7 @@ import json
 import helpers.utils.General as utils
 import requests
 import math
+from indexer.Flattener import Flattener
 
 
 class Retreiver:
@@ -16,7 +17,7 @@ class Retreiver:
         self.mapping = config['indices'][index_name]["mappings"]
         self.flattener = Flattener(self.mapping)
         self.mapping = self.flattener.getFlattenedMapping()
-        self.number_of_shards = config['indices'][index_name]["settings"]["number_of_shards"]
+        self.number_of_shards = config['indices'][index_name]["settings"]["index"]["number_of_shards"]
         self.doc_stores, self.inverted_indices = utils.loadDocStoreAndInvertedIndex(index_name, self.number_of_shards, config, self.mapping)
 
     def update(self, doc_stores, inverted_indices):
