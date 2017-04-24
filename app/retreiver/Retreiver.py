@@ -19,6 +19,10 @@ class Retreiver:
         self.number_of_shards = config['indices'][index_name]["settings"]["number_of_shards"]
         self.doc_stores, self.inverted_indices = utils.loadDocStoreAndInvertedIndex(index_name, self.number_of_shards, config, self.mapping)
 
+    def update(self, doc_stores, inverted_indices):
+        self.doc_stores = doc_stores
+        self.inverted_indices = inverted_indices
+
     def dot_product(self, vector1, vector2):
         result = 0
         for key, value in vector1.items():
