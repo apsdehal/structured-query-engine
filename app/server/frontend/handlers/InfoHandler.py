@@ -9,7 +9,7 @@ import json
 
 class InfoHandler(tornado.web.RequestHandler):
     def initialize(self, config):
-        self.config = config
+        self.config = config["config"]
         return
 
     def get(self):

@@ -12,6 +12,11 @@ log = logging.getLogger(__name__)
 def start(config):
     SERVER_PORT = config["base_port"]
     task_id = process.fork_processes(None)
+    config = {
+        "config": config,
+        "retreivers": {},
+        "indexers": {}
+    }
 
     application = web.Application([
         (r"/", InfoHandler, dict(config=config)),

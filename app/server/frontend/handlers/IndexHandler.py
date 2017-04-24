@@ -14,8 +14,17 @@ import shutil
 
 class IndexHandler(tornado.web.RequestHandler):
     def initialize(self, config):
-        self.config = config
+        self.config = config["config"]
         return
+
+    def head(self, index_name):
+        if index_name not in self.config["indices"]:
+            self.set_status(404)
+            self.write("")
+            return
+        else:
+            self.set_status(200)
+            self.write("")
 
     def get(self, index_name):
         if index_name not in self.config["indices"]:
@@ -34,7 +43,7 @@ class IndexHandler(tornado.web.RequestHandler):
 
     def put(self, index_name):
         body = json.loads(self.request.body)
-        if index_name not in self.config["indices"]:
+        if index_name in self.config["indices"]:
             self.set_status(400)
             self.write(json.dumps({"error": "Index already exists"}))
             return
@@ -59,13 +68,16 @@ class IndexHandler(tornado.web.RequestHandler):
         info["settings"] = settings
 
         data_path = self.config["data_path"]
-        save_path = os.path.join(data_path, "indices", index_name, "info")
+        save_path = os.path.join(data_path, "indices", index_name)
 
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
+        save_path = os.path.join(save_path, "info")
+
         with open(save_path, "w") as f:
-            f.write(info)
+            f.write(json.dumps(info))
+        self.config["indices"][index_name] = info
         self.write(json.dumps({"acknowledged": True}))
 
     def delete(self):

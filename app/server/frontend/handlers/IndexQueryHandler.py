@@ -11,16 +11,22 @@ from tornado import gen, process
 
 class IndexQueryHandler(tornado.web.RequestHandler):
     def initialize(self, config):
-        self.config = config
-        self.indexers = {}
-        self.retreivers = {}
+        self.config = config["config"]
+        self.indexers = config["indexers"]
+        self.retreivers = config["retreivers"]
         return
 
     def get(self, index_name, type_name, search_param):
+        if search_param != "_search":
+            if index_name not in self.indexers:
+                self.indexers[index_name] = Indexer(self.config, index_name)
+            self.write(self.indexers[index_name].get_doc(type_name, search_param))
+            return
+
         body = json.loads(self.request.body)
         if index_name not in self.retreivers:
             self.retreivers[index_name] = Retreiver(self.config, index_name)
-        response = self.retreivers[index_name].query(index_name, type_name, search_param)
+        response = self.retreivers[index_name].query(type_name, body)
         self.write(response)
 
     def post(self, index_name, type_name, search_param=None):
@@ -30,6 +36,7 @@ class IndexQueryHandler(tornado.web.RequestHandler):
 
         doc_saved = self.indexers[index_name].add(type_name, doc)
         self.write(json.dumps(doc_saved))
+        self.indexers[index_name].flush_to_file()
 
     def put(self, index_name, type_name, doc_id):
         doc = json.loads(self.request.body)

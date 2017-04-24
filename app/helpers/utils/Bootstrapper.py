@@ -4,10 +4,11 @@ import uuid
 
 
 class Bootstrapper:
-    def bootstrap(self):
+    def bootstrap(self, base_path):
         config = {}
+        config["base_path"] = base_path
         # We can change this later if we want
-        data_path = os.path.join(".", ".data")
+        data_path = os.path.join(base_path, ".data")
         config["data_path"] = data_path
         indices_path = os.path.join(data_path, "indices")
         config["indices_path"] = indices_path
@@ -15,12 +16,12 @@ class Bootstrapper:
         if not os.path.exists(indices_path):
             os.makedirs(indices_path)
 
-        dirs = os.listdir(indices_path)
+        files = os.listdir(indices_path)
         config["indices"] = {}
-        for d in dirs:
-            info_path = os.path.join(d, "info")
+        for d in files:
+            info_path = os.path.join(indices_path, d, "info")
             with open(info_path, "r") as info:
-                config["indices"][os.path.dirname(d)] = json.loads(info.read())
+                config["indices"][d] = json.loads(info.read())
 
         config_path = os.path.join(data_path, "config")
 
