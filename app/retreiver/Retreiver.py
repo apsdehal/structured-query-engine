@@ -2,22 +2,25 @@ import json
 import app.helpers.utils.General as utils
 import requests
 
+
 class Retreiver:
-    def __init__(self, config):
+    def __init__(self, config, index_name):
         self.STANDARD_ANALYZER = 'standard'
         self.TERM_QUERY = 'term'
         self.MATCH_QUERY = 'match'
         self.BOOL_QUERY = 'bool'
         self.config = config
-        return
-
+        self.mapping = config[index_name]["mappings"]
+        self.flattener = Flattener(self.mapping)
+        self.mapping = self.flattener.getFlattenedMapping()
+        self.number_of_shards = config[index_name]["settings"]["number_of_shards"]
+        self.doc_stores, self.inverted_indices = utils.loadDocStoreAndInvertedIndex(index_name, self.number_of_shards, config, self.mapping)
 
     def dot_product(self, vector1, vector2):
         result = 0
-        for key,value in vector1.items():
-            result = result + value*vector2.get(key,0)
+        for key, value in vector1.items():
+            result = result + value * vector2.get(key, 0)
         return result
-
 
     def process_query(self, data):
         if self.TERM_QUERY in data:
@@ -25,7 +28,7 @@ class Retreiver:
             if len(items) > 1:
                 print('[term] query doesnt support multiple fields')
                 return
-            [(f,q)] = items
+            [(f, q)] = items
             fields = [f]
             query_strings = [q]
             query_type = self.TERM_QUERY
@@ -34,49 +37,49 @@ class Retreiver:
             if len(items) > 1:
                 print('[match] query doesnt support multiple fields')
                 return
-            [(f,q)] = items
+            [(f, q)] = items
             fields = [f]
             query_strings = [q]
             query_type = self.MATCH_QUERY
         elif self.BOOL_QUERY in data:
             items = data[self.BOOL_QUERY].items()
-            must_items = items.get('must',[])
-            must_not_items = items.get('must_not',[])
-            should_items = items.get('should',[])
-            range_items = items.get('range',[])
+            must_items = items.get('must', [])
+            must_not_items = items.get('must_not', [])
+            should_items = items.get('should', [])
+            range_items = items.get('range', [])
 
             # should query
             should_fields = []
             should_field_querys = []
-            if len(should_items) == 0 :
+            if len(should_items) == 0:
                 should_query = None
-            else :
-                for should_item in should_items :
+            else:
+                for should_item in should_items:
                     if len(should_item[self.MATCH_QUERY].items()) > 1:
                         print('[match] query doesnt support multiple fields')
                         return
-                    [(f,q)] = should_item[self.MATCH_QUERY].items()
+                    [(f, q)] = should_item[self.MATCH_QUERY].items()
                     should_fields.append(f)
                     should_field_querys.append(q)
 
             # must query
             must_fields = []
             must_field_querys = []
-            if len(must_items) == 0 :
+            if len(must_items) == 0:
                 must_query = None
-            else :
-                for must_item in must_items :
+            else:
+                for must_item in must_items:
                     if len(must_item[self.MATCH_QUERY].items()) > 1:
                         print('[match] query doesnt support multiple fields')
                         return
-                    [(f,q)] = must_item[self.MATCH_QUERY].items()
+                    [(f, q)] = must_item[self.MATCH_QUERY].items()
                     must_fields.append(f)
                     must_field_querys.append(q)
 
             # only implementing "should" for now
             fields = []
             query_strings = []
-            for f,q in zip(should_fields,should_field_querys):
+            for f, q in zip(should_fields, should_field_querys):
                 fields.append(f)
                 query_strings.append(q)
 
@@ -86,8 +89,7 @@ class Retreiver:
             return
         return fields, query_strings, query_type
 
-
-    def query(self, index_name, type_name, q):
+    def query(self, type_name, q):
         try:
             data = q['query']
         except KeyError:
@@ -99,15 +101,13 @@ class Retreiver:
             print('Exception occured while processing query')
             return
 
-        mapping = self.config[index_name]['mapping']
-
         scores = {}
 
-        for field,query_string in zip(fields,query_strings):
+        for field, query_string in zip(fields, query_strings):
             if query_type == self.TERM_QUERY:
                 query_tokens = [query_string.lower()]
-            else :
-                analyzer_type = mapping['movie']['properties'][field].get('analyzer',self.STANDARD_ANALYZER)
+            else:
+                analyzer_type = self.mapping[type_name][field].get('analyzer', self.STANDARD_ANALYZER)
                 analyzer = utils.getAnalyzer(analyzer_type)
                 query_tokens = analyzer.analyze(query_string)
 
@@ -116,15 +116,15 @@ class Retreiver:
             posting_list = []
 
             for token in query_tokens:
-                #if query contains a word twice then it will be ignored second time
+                # if query contains a word twice then it will be ignored second time
                 if token in query_vector:
                     continue
-                for index_server_url in self.config['index_server_url']:
+                for i in range(self.number_of_shards):
                     # need to get idf somehow
                     self.term_inv_doc_freq = float(requests.get(query_url))
                     query_vector[token] = 1.0 * self.term_inv_doc_freq
-                    tf_list = self.config['tf_list'][field].get(token,[])
-                    for doc_id,freq in tf_list:
+                    tf_list = self.inverted_indices[type_name][i][field].get(token, [])
+                    for doc_id, freq in tf_list:
                         if doc_id in document_vectors:
                             inner_dict = document_vectors[doc_id]
                             inner_dict[token] = freq * self.term_inv_doc_freq
@@ -134,12 +134,11 @@ class Retreiver:
                             document_vectors[doc_id] = inner_dict
 
             for doc_id, document_vector in document_vectors.items():
-                score = self.dot_product(document_vector,query_vector)
-                scores[doc_id] = scores.get(doc_id,0) + score
+                score = self.dot_product(document_vector, query_vector)
+                scores[doc_id] = scores.get(doc_id, 0) + score
 
-        for doc_id, score in scores.items():    
-            posting_list.append([doc_id,score])
+        for doc_id, score in scores.items():
+            posting_list.append([doc_id, score])
 
-        posting_list.sort(key=lambda tup: tup[1],reverse=True)
+        posting_list.sort(key=lambda tup: tup[1], reverse=True)
         return posting_list
-
