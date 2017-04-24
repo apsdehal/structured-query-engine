@@ -22,7 +22,7 @@ class IndexHandler(tornado.web.RequestHandler):
             self.set_status(404)
             self.write(json.dumps({"error": "Index not found"}))
             return
-        save_path = os.path.join(self.config["data_path"], index_name, "info")
+        save_path = os.path.join(self.config["data_path"], "indices", index_name, "info")
 
         with open(save_path, "r") as f:
             index_info = f.read()
@@ -59,7 +59,7 @@ class IndexHandler(tornado.web.RequestHandler):
         info["settings"] = settings
 
         data_path = self.config["data_path"]
-        save_path = os.path.join(data_path, index_name, "info")
+        save_path = os.path.join(data_path, "indices", index_name, "info")
 
         if not os.path.exists(save_path):
             os.makedirs(save_path)
@@ -74,5 +74,5 @@ class IndexHandler(tornado.web.RequestHandler):
             self.write(json.dumps({"error": "Index doesn't exists"}))
             return
 
-        index_path = os.path.join(self.config["data_path"], index_name)
+        index_path = os.path.join(self.config["data_path"], "indices", index_name)
         shutil.rmtree(index_path)
