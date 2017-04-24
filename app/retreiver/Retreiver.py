@@ -1,6 +1,7 @@
 import json
 import helpers.utils.General as utils
 import requests
+import math
 
 
 class Retreiver:
@@ -9,11 +10,13 @@ class Retreiver:
         self.TERM_QUERY = 'term'
         self.MATCH_QUERY = 'match'
         self.BOOL_QUERY = 'bool'
+        self.NUM_RESULTS_TO_RETURN = 10
+        self.index_name = index_name
         self.config = config
-        self.mapping = config[index_name]["mappings"]
+        self.mapping = config['indices'][index_name]["mappings"]
         self.flattener = Flattener(self.mapping)
         self.mapping = self.flattener.getFlattenedMapping()
-        self.number_of_shards = config[index_name]["settings"]["number_of_shards"]
+        self.number_of_shards = config['indices'][index_name]["settings"]["number_of_shards"]
         self.doc_stores, self.inverted_indices = utils.loadDocStoreAndInvertedIndex(index_name, self.number_of_shards, config, self.mapping)
 
     def dot_product(self, vector1, vector2):
@@ -89,6 +92,30 @@ class Retreiver:
             return
         return fields, query_strings, query_type
 
+    def get_docs(self, posting_list, type_name):
+        results = {}
+        sub_results = {}
+        hits = []
+        max_score = -1
+        total_results = min(self.NUM_RESULTS_TO_RETURN, len(posting_list))
+
+        for doc_id, score in posting_list[:self.NUM_RESULTS_TO_RETURN]:
+            max_score = max(score,max_score)
+            shard_num = doc_id % self.number_of_shards
+            doc = {}
+            doc['_index'] = self.index_name
+            doc['_type'] = type_name
+            doc['_source'] = self.doc_stores[type_name][self.index_name][type_name][shard_num][doc_id]
+            doc['_score'] = score
+            doc['_id'] = doc_id
+            hits.append(doc)
+
+        sub_results['hits'] = hits
+        sub_results['max_score'] = max_score
+        sub_results['total'] = total_results
+        results['hits'] = sub_results
+        return results
+
     def query(self, type_name, q):
         try:
             data = q['query']
@@ -120,11 +147,14 @@ class Retreiver:
                 if token in query_vector:
                     continue
                 for i in range(self.number_of_shards):
-                    # need to get idf somehow
-                    self.term_inv_doc_freq = float(requests.get(query_url))
                     query_vector[token] = 1.0 * self.term_inv_doc_freq
-                    tf_list = self.inverted_indices[type_name][i][field].get(token, [])
-                    for doc_id, freq in tf_list:
+                    tf_dict = self.inverted_indices[type_name][self.index_name][type_name][i][field].get(token, {})
+
+                    total_docs = float(self.doc_stores[type_name][self.index_name][type_name][i]['num_docs'])
+                    self.term_inv_doc_freq = math.log(total_docs / tf_dict['num_docs'])
+                    my_dict.pop('num_docs', None)
+
+                    for doc_id, freq in tf_dict.items():
                         if doc_id in document_vectors:
                             inner_dict = document_vectors[doc_id]
                             inner_dict[token] = freq * self.term_inv_doc_freq
@@ -138,7 +168,8 @@ class Retreiver:
                 scores[doc_id] = scores.get(doc_id, 0) + score
 
         for doc_id, score in scores.items():
-            posting_list.append([doc_id, score])
+            posting_list.append((doc_id, score))
 
         posting_list.sort(key=lambda tup: tup[1], reverse=True)
-        return posting_list
+
+        return self.get_docs(posting_list, type_name)
