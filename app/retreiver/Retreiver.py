@@ -1,5 +1,5 @@
 import json
-import app.utils.General as utils
+import app.helpers.utils.General as utils
 import requests
 
 class Retreiver:
@@ -119,13 +119,11 @@ class Retreiver:
                 #if query contains a word twice then it will be ignored second time
                 if token in query_vector:
                     continue
-                for index_server_url, idf_server_url in zip(self.config['index_server_url'], self.config['idf_server_url']):
-                    query_url = '/'.join([idf_server_url, index_name, type_name, token])
+                for index_server_url in self.config['index_server_url']:
+                    # need to get idf somehow
                     self.term_inv_doc_freq = float(requests.get(query_url))
                     query_vector[token] = 1.0 * self.term_inv_doc_freq
-                    query_url = '/'.join([index_server_url, index_name, type_name, field, token])
-                    tf_list = json.loads(requests.get(query_url))['postings']
-                    # tf_list = self.config['tf_list'][field].get(token,[])
+                    tf_list = self.config['tf_list'][field].get(token,[])
                     for doc_id,freq in tf_list:
                         if doc_id in document_vectors:
                             inner_dict = document_vectors[doc_id]
