@@ -7,7 +7,7 @@ from collections import defaultdict
 from indexer.Flattener import Flattener
 from indexer.Tokenizer import Tokenizer
 from helpers.utils.Compressor import Compressor
-from helpers.utils.General import AutoVivification, loadDocStoreAndInvertedIndex
+from helpers.utils.General import loadDocStoreAndInvertedIndex
 from helpers.utils.Debounce import Debounce
 from concurrent.futures import ProcessPoolExecutor
 
@@ -111,16 +111,15 @@ class Indexer:
                 if all(isinstance(elem, list) for elem in type_field):
                     type_field = [item for sublist in type_field for item in sublist]
                 dictionary = Counter(type_field)
-                field_tf = self.tfTable[doc_type][self.generate_shard_number(doc_id)].get(field, dict())
-                if not field_tf:
-                    self.tfTable[doc_type][self.generate_shard_number(doc_id)][field] = field_tf
+                shard_tf = self.tfTable[doc_type][self.generate_shard_number(doc_id)]
+                shard_tf[field] = shard_tf.get(field, dict())
                 for key in dictionary:
-                    field_tf[key] = field_tf.get(key,dict())
+                    shard_tf[field][key] = shard_tf[field].get(key,dict())
                     try:
-                        field_tf[key]['num_docs'] += 1
+                        shard_tf[field][key]['num_docs'] += 1
                     except:
-                        field_tf[key]['num_docs'] = 1
-                    field_tf[key][doc_id] = dictionary[key]
+                        shard_tf[field][key]['num_docs'] = 1
+                    shard_tf[field][key][doc_id] = dictionary[key]
 
     def generate_doc_store(self, doc_id, doc_type, doc):
         ds_type = self.document_store[doc_type][self.generate_shard_number(doc_id)]

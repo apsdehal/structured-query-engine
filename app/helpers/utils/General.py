@@ -1,6 +1,5 @@
 import os
 import json
-from collections import defaultdict
 from helpers.utils.Compressor import Compressor
 
 compressor = Compressor()
