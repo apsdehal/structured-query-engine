@@ -1,7 +1,5 @@
 import tornado.ioloop
 import tornado.web
-from tornado.httpclient import AsyncHTTPClient
-from tornado import gen, process, escape
 import socket
 import logging
 import copy
@@ -10,6 +8,11 @@ import uuid
 import time
 import os
 import shutil
+
+from tornado.httpclient import AsyncHTTPClient
+from tornado import gen, process, escape
+from indexer.Indexer import Indexer
+from retreiver.Retreiver import Retreiver
 
 
 class IndexHandler(tornado.web.RequestHandler):
@@ -78,6 +81,8 @@ class IndexHandler(tornado.web.RequestHandler):
         with open(save_path, "w") as f:
             f.write(json.dumps(info))
         self.config["indices"][index_name] = info
+        self.config["indexers"][index_name] = Indexer(self.config, index_name)
+        self.config["retreivers"][index_name] = Retreiver(self.config, index_name)
         self.write(json.dumps({"acknowledged": True}))
 
     def delete(self):

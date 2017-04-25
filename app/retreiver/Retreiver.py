@@ -18,7 +18,10 @@ class Retreiver:
         self.flattener = Flattener(self.mapping)
         self.mapping = self.flattener.getFlattenedMapping()
         self.number_of_shards = config['indices'][index_name]["settings"]["index"]["number_of_shards"]
-        self.doc_stores, self.inverted_indices = utils.loadDocStoreAndInvertedIndex(index_name, self.number_of_shards, config, self.mapping)
+        if index_name in self.config["indexers"]:
+            self.doc_stores, self.inverted_indices = self.config["indexers"][index_name].get_doc_store_ii()
+        else:
+            self.doc_stores, self.inverted_indices = utils.loadDocStoreAndInvertedIndex(index_name, self.number_of_shards, config, self.mapping)
 
     def update(self, doc_stores, inverted_indices):
         self.doc_stores = doc_stores

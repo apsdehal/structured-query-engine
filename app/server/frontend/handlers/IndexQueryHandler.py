@@ -12,9 +12,8 @@ from tornado import gen, process, escape
 class IndexQueryHandler(tornado.web.RequestHandler):
     def initialize(self, config):
         self.config = config["config"]
-        self.indexers = config["indexers"]
-        self.retreivers = config["retreivers"]
-        return
+        self.indexers = self.config["indexers"]
+        self.retreivers = self.config["retreivers"]
 
     def get(self, index_name, type_name, search_param):
         if search_param != "_search":

@@ -13,9 +13,7 @@ def start(config):
     SERVER_PORT = config["base_port"]
     task_id = process.fork_processes(None)
     config = {
-        "config": config,
-        "retreivers": {},
-        "indexers": {}
+        "config": config
     }
 
     application = web.Application([

@@ -118,7 +118,7 @@ class Indexer:
                 dictionary = Counter(type_field)
                 shard_tf = self.tfTable[doc_type][self.generate_shard_number(doc_id)]
                 shard_tf[field] = shard_tf.get(field, dict())
-                
+
                 for key in dictionary:
                     shard_tf[field][key] = shard_tf[field].get(key, [0, dict()])
                     shard_tf[field][key][0] += 1
@@ -159,7 +159,7 @@ class Indexer:
                 if all(isinstance(elem, list) for elem in type_field):
                     type_field = [item for sublist in type_field for item in sublist]
                 dictionary = Counter(type_field)
-       
+
                 field_tf = self.tfTable[doc_type][self.generate_shard_number(doc_id)][field]
                 for key in dictionary:
                     del field_tf[key][1][doc_id]
@@ -178,6 +178,9 @@ class Indexer:
                 del shard_ds['num_docs']
         except:
             pass
+
+    def get_doc_store_ii(self):
+        return self.document_store, self.tfTable
 
     @Debounce(seconds=10)
     def flush_to_file(self):

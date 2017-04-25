@@ -2,6 +2,9 @@ import os
 import json
 import uuid
 
+from indexer.Indexer import Indexer
+from retreiver.Retreiver import Retreiver
+
 
 class Bootstrapper:
     def bootstrap(self, base_path):
@@ -40,4 +43,11 @@ class Bootstrapper:
 
         config["name"] = uuid.uuid4().hex
         config.update(general_config)
+        config["indexers"] = {}
+        config["retreivers"] = {}
+
+        for index in config["indices"]:
+            config["indexers"][index] = Indexer(config, index)
+            config["retreivers"][index] = Retreiver(config, index)
+
         return config
