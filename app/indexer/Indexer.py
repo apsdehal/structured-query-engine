@@ -13,7 +13,6 @@ from concurrent.futures import ProcessPoolExecutor
 
 log = logging.getLogger(__name__)
 
-
 class Indexer:
 
     def __init__(self, config, index):
@@ -31,10 +30,13 @@ class Indexer:
         self.number_of_shards = config["indices"][index]["settings"]["index"]["number_of_shards"]
         self.tfTable = AutoVivification()
         self.document_store, self.tfTable = loadDocStoreAndInvertedIndex(index, self.number_of_shards, config, self.mapping)
+        self.set_index_doc_types()
+
+    def set_index_doc_types(self):
+        for i in self.document_store:
+            self.index_doc_type.add(i)
 
     def update(self, doc_type, doc_id, doc):
-        if type(doc_id) != int:
-            doc_id = int(doc_id)
         flattened = self.flattener.flatten(doc_type, doc)
         inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
         self.degenerate_inverted_index(doc_id, doc_type, ii)
@@ -43,11 +45,10 @@ class Indexer:
         doc['is_deleted'] = False
         doc_updated = self.add(doc_type, doc, True)
         log.info(str(doc_id) + ' updated')
+        self.future_flush()
         return doc_updated
 
     def delete(self, doc_type, doc_id):
-        if type(doc_id) != int:
-            doc_id = int(doc_id)
         if doc_type not in self.index_doc_type:
             log.info('Invalid doc_type')
             return False
@@ -65,6 +66,7 @@ class Indexer:
             log.info('Invalid doc_id')
             return False
 
+        self.future_flush()
         return True
 
     def future_flush(self):
