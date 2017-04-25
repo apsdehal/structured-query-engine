@@ -23,14 +23,14 @@ class IndexQueryHandler(tornado.web.RequestHandler):
             self.write(self.indexers[index_name].get_doc(type_name, search_param))
             return
 
-        body = json.loads(self.request.body)
+        body = escape.json_decode(self.request.body.decode('utf-8'))
         if index_name not in self.retreivers:
             self.retreivers[index_name] = Retreiver(self.config, index_name)
         response = self.retreivers[index_name].query(type_name, body)
         self.write(response)
 
     def post(self, index_name, type_name, search_param=None):
-        doc = escape.json_decode(self.request.body)
+        doc = escape.json_decode(self.request.body.decode('utf-8'))
         if index_name not in self.indexers:
             self.indexers[index_name] = Indexer(self.config, index_name)
 
@@ -38,7 +38,7 @@ class IndexQueryHandler(tornado.web.RequestHandler):
         self.write(json.dumps(doc_saved))
 
     def put(self, index_name, type_name, doc_id):
-        doc = json.loads(self.request.body)
+        doc = escape.json_decode(self.request.body.decode('utf-8'))
         if index_name not in self.indexers:
             self.indexers[index_name] = Indexer(self.config, index_name)
 

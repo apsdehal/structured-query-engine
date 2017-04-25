@@ -1,7 +1,7 @@
 import tornado.ioloop
 import tornado.web
 from tornado.httpclient import AsyncHTTPClient
-from tornado import gen, process
+from tornado import gen, process, escape
 import socket
 import logging
 import copy
@@ -42,7 +42,7 @@ class IndexHandler(tornado.web.RequestHandler):
         return
 
     def put(self, index_name):
-        body = json.loads(self.request.body)
+        body = escape.json_decode(self.request.body.decode('utf-8'))
         if index_name in self.config["indices"]:
             self.set_status(400)
             self.write(json.dumps({"error": "Index already exists"}))
