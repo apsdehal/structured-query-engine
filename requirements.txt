@@ -1,0 +1,4 @@
+nltk==3.2.2
+python-snappy==0.5
+requests==2.13.0
+tornado==4.5.1

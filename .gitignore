@@ -8,3 +8,4 @@ __pycache__
 *.ds
 *.tf
 .data
+!requirements.txt
