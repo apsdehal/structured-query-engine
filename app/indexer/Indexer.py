@@ -1,11 +1,14 @@
 import json
 import pickle
 import os
+import logging
 from collections import Counter
 from collections import defaultdict
 from indexer.Flattener import Flattener
 from indexer.Tokenizer import Tokenizer
 from helpers.utils.Compressor import Compressor
+
+log = logging.getLogger(__name__)
 
 
 class AutoVivification(dict):
@@ -19,11 +22,8 @@ class AutoVivification(dict):
 
 
 class Indexer:
-    # defaultdict(lambda: defaultdict(int))
     tfTable = AutoVivification()
-    # defaultdict(lambda: defaultdict(int))
     idfTable = AutoVivification()
-    # defaultdict(list)
     document_store = AutoVivification()
 
     def __init__(self, config, index):
@@ -42,31 +42,32 @@ class Indexer:
 
     def update(self, doc_type, doc_id, doc):
         deleted = self.delete(doc_type, doc_id)
-
         self.degenerate()
-
         doc_updated = self.add(doc_type, doc, doc_id, True)
-
-        print(doc_id, ' updated')
+        log.info(doc_id, ' updated')
 
         return doc_updated
 
     def delete(self, doc_type, doc_id):
+        if type(doc_id) != int:
+            doc_id = int(doc_id)
+
         if doc_type not in self.index_doc_type:
-            print('Invalid doc_type')
+            log.info('Invalid doc_type')
             return False
+        ds_shard = self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)]
 
         try:
-            if self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)][doc_id]['is_deleted'] is False:
-                self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)][doc_id]['is_deleted'] = True
+            if ds_shard[doc_id]['is_deleted'] is False:
+                ds_shard[doc_id]['is_deleted'] = True
                 self.num_docs -= 1
                 self.del_docs.append([doc_type, doc_id])
-                print(doc_id, ' deleted')
+                log.info(doc_id, ' deleted')
             else:
-                print('Document already marked for deletion')
+                log.info('Document already marked for deletion')
                 return False
         except:
-            print('Invalid doc_id')
+            log.info('Invalid doc_id')
             return False
 
         return True
@@ -74,28 +75,22 @@ class Indexer:
     def add(self, doc_type, doc, doc_id=0, isUpdate=False):
 
         if doc_type not in self.index_doc_type:
-            # print('new doc_type')
             self.document_store[self.index][doc_type] = [dict() for x in range(self.number_of_shards)]
             for field in self.mapping[doc_type]:
                 if self.mapping[doc_type][field].get('index', True):
                     self.tfTable[self.index][doc_type] = [AutoVivification() for x in range(self.number_of_shards)] # defaultdict(lambda: defaultdict(list))
                     self.idfTable[self.index][doc_type][field] = defaultdict(int)
             self.index_doc_type.add(doc_type)
-            # print('doc_type added')
 
         flattened = self.flattener.flatten(doc_type, doc)
-        # print('flattened')
         inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
-        # print('tokenized')
         if isUpdate is False:
             self.new_doc_id += 1
             doc['doc_id'] = self.new_doc_id
         self.num_docs += 1
 
         doc['is_deleted'] = False
-        # print('call generate')
         self.generate(doc['doc_id'], doc_type, inverted_index, doc)
-        # print('return from generate')
 
         # if self.num_docs % 1000 == 0:
         #     self.flush_to_file()
@@ -115,40 +110,41 @@ class Indexer:
     def generate_inverted_index(self, doc_id, doc_type, ii):
         for field in self.mapping[doc_type]:
             if self.mapping[doc_type][field].get('index', True):
-                movie_field = ii[field]
-                if all(isinstance(elem, list) for elem in movie_field):
-                    movie_field = [item for sublist in movie_field for item in sublist]
+                type_field = ii[field]
+                if all(isinstance(elem, list) for elem in type_field):
+                    type_field = [item for sublist in type_field for item in sublist]
 
-                dictionary = Counter(movie_field)
-
+                dictionary = Counter(type_field)
+                field_tf = self.tfTable[self.index][doc_type][self.generate_shard_number(doc_id)][field]
                 for key in dictionary:
                     # posting = [doc_id, dictionary[key]]
                     try:
-                        self.tfTable[self.index][doc_type][self.generate_shard_number(doc_id)][field][key]['num_docs'] += 1
+                        field_tf[key]['num_docs'] += 1
                     except:
-                        self.tfTable[self.index][doc_type][self.generate_shard_number(doc_id)][field][key]['num_docs'] = 1
-                    self.tfTable[self.index][doc_type][self.generate_shard_number(doc_id)][field][key][doc_id] = dictionary[key]
+                        field_tf[key]['num_docs'] = 1
+                    field_tf[key][doc_id] = dictionary[key]
 
     def generate_inverted_doc_frequency(self, doc_id, doc_type, ii):
         for field in self.mapping[doc_type]:
             if self.mapping[doc_type][field].get('index', True):
-                movie_field = ii[field]
-                if all(isinstance(elem, list) for elem in movie_field):
-                    movie_field = [item for sublist in movie_field for item in sublist]
+                type_field = ii[field]
+                if all(isinstance(elem, list) for elem in type_field):
+                    type_field = [item for sublist in type_field for item in sublist]
 
-                keys = set(movie_field)
-
+                keys = set(type_field)
+                field_idf = self.idfTable[self.index][doc_type][field]
                 for key in keys:
-                    self.idfTable[self.index][doc_type][field][key] += 1
-                self.idfTable[self.index][doc_type][field]['total_number_of_docs'] = self.num_docs
+                    field_idf[key] += 1
+                field_idf['total_number_of_docs'] = self.num_docs
 
     def generate_doc_store(self, doc_id, doc_type, doc):
+        ds_type = self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)]
         try:
-            self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)]['num_docs'] += 1
+            ds_type['num_docs'] += 1
         except:
-            self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)]['num_docs'] = 1
+            ds_type['num_docs'] = 1
 
-        self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)][doc_id] = doc
+        ds_type[doc_id] = doc
 
     def get_doc(self, doc_type, doc_id):
         doc_id = int(doc_id)
@@ -168,28 +164,27 @@ class Indexer:
     def degenerate_inverted_index(self, doc_id, doc_type, ii):
         for field in self.mapping[doc_type]:
             if self.mapping[doc_type][field].get('index',True):
-                movie_field = ii[field]
-                if all(isinstance(elem, list) for elem in movie_field):
-                    movie_field = [item for sublist in movie_field for item in sublist]
+                type_field = ii[field]
+                if all(isinstance(elem, list) for elem in type_field):
+                    type_field = [item for sublist in type_field for item in sublist]
 
-                dictionary = Counter(movie_field)
-
+                dictionary = Counter(type_field)
+                tf_field = self.tfTable[self.index][doc_type][self.generate_shard_number(doc_id)][field]
                 for key in dictionary:
                     # posting = [doc_id, dictionary[key]]
-                    del self.tfTable[self.index][doc_type][self.generate_shard_number(doc_id)][field][key][doc_id]
-                    self.tfTable[self.index][doc_type][self.generate_shard_number(doc_id)][field][key]['num_docs'] -= 1
-                    if (self.tfTable[self.index][doc_type][self.generate_shard_number(doc_id)][field][key]['num_docs'] == 0):
-                        del self.tfTable[self.index][doc_type][self.generate_shard_number(doc_id)][field][key]
-                        if not self.tfTable[self.index][doc_type][self.generate_shard_number(doc_id)][field]:
+                    del tf_field[key][doc_id]
+                    tf_field[key]['num_docs'] -= 1
+                    if (tf_field[key]['num_docs'] == 0):
+                        del tf_field[key]
+                        if not tf_field:
                             del self.tfTable[self.index][doc_type][self.generate_shard_number(doc_id)][field]
 
     def degenerate_doc_store(self, doc_id, doc_type, doc):
-        del self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)][doc_id]
-
-        self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)]['num_docs'] -= 1
-
-        if self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)]['num_docs'] == 0:
-            del self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)]['num_docs']
+        shard_ds = self.document_store[self.index][doc_type][self.generate_shard_number(doc_id)]
+        del shard_ds[doc_id]
+        shard_ds['num_docs'] -= 1
+        if shard_ds['num_docs'] == 0:
+            del shard_ds['num_docs']
 
     def flush_to_file(self):
         self.degenerate()
@@ -198,8 +193,6 @@ class Indexer:
                 for k in range(self.number_of_shards):
                     file_name = i + "_" + j + "_" + str(k) + ".tf"
                     file_name = os.path.join(self.dir_path, file_name)
-                    print(file_name)
-                    # print(self.tfTable[i][j][k])
                     with open(file_name, 'wb') as f:
                         f.write(self.compressor.compress(json.dumps(self.tfTable[i][j][k]).encode()))
 
@@ -215,8 +208,6 @@ class Indexer:
             for j in self.document_store[i]:
                 for k in range(self.number_of_shards):
                     file_name = i + "_" + j + "_" + str(k) + ".ds"
-                    print(file_name)
                     file_name = os.path.join(self.dir_path, file_name)
-                    # print(self.document_store[i][j][k])
                     with open(file_name, 'wb') as f:
                         f.write(self.compressor.compress(json.dumps(self.document_store[i][j][k]).encode()))
