@@ -39,7 +39,7 @@ class Indexer:
     def update(self, doc_type, doc_id, doc):
         flattened = self.flattener.flatten(doc_type, doc)
         inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
-        self.degenerate_inverted_index(doc_id, doc_type, ii)
+        self.degenerate_inverted_index(doc_id, doc_type, inverted_index)
         self.degenerate_doc_store(doc_id, doc_type, doc)
         doc['doc_id'] = doc_id
         doc['is_deleted'] = False
@@ -158,10 +158,14 @@ class Indexer:
 
     def degenerate_doc_store(self, doc_id, doc_type, doc):
         shard_ds = self.document_store[doc_type][self.generate_shard_number(doc_id)]
-        del shard_ds[doc_id]
-        shard_ds['num_docs'] -= 1
-        if shard_ds['num_docs'] == 0:
-            del shard_ds['num_docs']
+        try:
+            if shard_ds[doc_id]:
+                del shard_ds[doc_id]
+                shard_ds['num_docs'] -= 1
+                if shard_ds['num_docs'] == 0:
+                    del shard_ds['num_docs']
+        except:
+            pass
 
     @Debounce(seconds=10)
     def flush_to_file(self):
