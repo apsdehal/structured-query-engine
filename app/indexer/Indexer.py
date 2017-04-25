@@ -10,7 +10,6 @@ from helpers.utils.Compressor import Compressor
 
 log = logging.getLogger(__name__)
 
-
 class AutoVivification(dict):
     """Implementation of perl's autovivification feature."""
     def __getitem__(self, item):
@@ -19,7 +18,6 @@ class AutoVivification(dict):
         except KeyError:
             value = self[item] = type(self)()
             return value
-
 
 class Indexer:
     
@@ -51,10 +49,10 @@ class Indexer:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.flush_to_file()
-        log.info('in exit')
+        self.flush_to_file()        
         with open(self.index, 'wb') as f:   
             pickle.dump(self.__dict__, f, pickle.HIGHEST_PROTOCOL)
+        log.info('in exit')
         
     def update(self, doc_type, doc_id, doc):
         if type(doc_id) != int:
@@ -107,7 +105,7 @@ class Indexer:
         flattened = self.flattener.flatten(doc_type, doc)
         inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)        
         self.generate(doc['doc_id'], doc_type, doc, inverted_index)
-        log.info(doc['doc_id'],' added')
+        log.info(doc['doc_id'], ' added')
         # if self.num_docs % 1000 == 0:
         #     self.flush_to_file()
         #     print('flushed to file')
@@ -160,10 +158,9 @@ class Indexer:
     def degenerate_inverted_index(self, doc_id, doc_type, ii):
         for field in self.mapping[doc_type]:
             if self.mapping[doc_type][field].get('index',True):
-                type_field = ii[field]
+                type_field = ii.get(field, [])
                 if all(isinstance(elem, list) for elem in type_field):
                     type_field = [item for sublist in type_field for item in sublist]
-
                 dictionary = Counter(type_field)
                 field_tf = self.tfTable[self.index][doc_type][self.generate_shard_number(doc_id)][field]
                 for key in dictionary:
@@ -183,17 +180,19 @@ class Indexer:
 
     def flush_to_file(self):
         self.degenerate()
-        for j in self.tfTable:
-            for k in range(self.config['num_shards']):
-                file_name = self.index + "_" + j + "_" + str(k) + ".tf"
+        for i in self.tfTable:
+            for j in range(self.config['num_shards']):
+                file_name = self.index + "_" + i + "_" + str(j) + ".tf"
+                file_name = os.path.join(self.dir_path, file_name)
                 log.info(file_name)
-                # print(self.tfTable[j][k])
+                # print(self.tfTable[i][j])
                 with open(file_name, 'wb') as f:
-                    f.write(self.compressor.compress(json.dumps(self.tfTable[j][k]).encode()))
-        for j in self.document_store:
-            for k in range(self.config['num_shards']):
-                file_name = self.index + "_" + j + "_" + str(k) + ".ds"
+                    f.write(self.compressor.compress(json.dumps(self.tfTable[i][j]).encode()))
+        for i in self.document_store:
+            for j in range(self.config['num_shards']):
+                file_name = self.index + "_" + i + "_" + str(j) + ".ds"
+                file_name = os.path.join(self.dir_path, file_name)
                 log.info(file_name)
-                # print(self.document_store[j][k])
+                # print(self.document_store[i][j])
                 with open(file_name, 'wb') as f:
-                    f.write(self.compressor.compress(json.dumps(self.document_store[j][k]).encode()))
+                    f.write(self.compressor.compress(json.dumps(self.document_store[i][j]).encode()))
