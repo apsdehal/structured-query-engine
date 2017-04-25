@@ -6,7 +6,7 @@ import json
 from retreiver.Retreiver import Retreiver
 from indexer.Indexer import Indexer
 from tornado.httpclient import AsyncHTTPClient
-from tornado import gen, process
+from tornado import gen, process, escape
 
 
 class IndexQueryHandler(tornado.web.RequestHandler):
@@ -30,7 +30,7 @@ class IndexQueryHandler(tornado.web.RequestHandler):
         self.write(response)
 
     def post(self, index_name, type_name, search_param=None):
-        doc = json.loads(self.request.body)
+        doc = escape.json_decode(self.request.body)
         if index_name not in self.indexers:
             self.indexers[index_name] = Indexer(self.config, index_name)
 
