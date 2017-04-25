@@ -43,14 +43,15 @@ class Indexer:
 
     def update(self, doc_type, doc_id, doc):
         str_doc_id = str(doc_id)
-        flattened = self.flattener.flatten(doc_type, doc)
+        old_doc = self.document_store[doc_type][self.generate_shard_number(doc_id)][doc_id]
+        flattened = self.flattener.flatten(doc_type, old_doc)
         inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
         self.degenerate_inverted_index(str_doc_id, doc_type, inverted_index)
-        self.degenerate_doc_store(str_doc_id, doc_type, doc)
+        self.degenerate_doc_store(str_doc_id, doc_type)
         doc['doc_id'] = str_doc_id
         doc['is_deleted'] = False
         doc_updated = self.add(doc_type, doc, True)
-        log.info(str(doc_id) + ' updated')
+        log.info(str_doc_id + ' updated')
         self.future_flush()
         return doc_updated
 
@@ -146,7 +147,7 @@ class Indexer:
             flattened = self.flattener.flatten(doc_type, doc)
             inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
             self.degenerate_inverted_index(doc_id, doc_type, inverted_index)
-            self.degenerate_doc_store(doc_id, doc_type, doc)
+            self.degenerate_doc_store(doc_id, doc_type)
         self.del_docs = []
 
     def degenerate_inverted_index(self, doc_id, doc_type, ii):
@@ -166,7 +167,7 @@ class Indexer:
                         if not field_tf:
                             del field_tf
 
-    def degenerate_doc_store(self, doc_id, doc_type, doc):
+    def degenerate_doc_store(self, doc_id, doc_type):
         shard_ds = self.document_store[doc_type][self.generate_shard_number(doc_id)]
         try:
             del shard_ds[doc_id]
