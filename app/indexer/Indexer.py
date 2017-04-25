@@ -16,8 +16,6 @@ log = logging.getLogger(__name__)
 class Indexer:
 
     def __init__(self, config, index):
-        self.num_docs = 0
-        self.new_doc_id = 0
         self.index = index
         self.index_doc_type = set()
         self.del_docs = []
@@ -28,9 +26,16 @@ class Indexer:
         self.compressor = Compressor()
         self.dir_path = os.path.join(self.config["indices_path"], self.index)
         self.number_of_shards = config["indices"][index]["settings"]["index"]["number_of_shards"]
-        self.tfTable = AutoVivification()
         self.document_store, self.tfTable = loadDocStoreAndInvertedIndex(index, self.number_of_shards, config, self.mapping)
+        self.set_new_doc_ids()
         self.set_index_doc_types()
+
+    def set_new_doc_ids(self):
+        self.new_doc_ids = defaultdict(int)
+        for t in self.document_store:
+            for i in range(self.number_of_shards):
+                if self.new_doc_ids[t] < self.document_store[t][i]['new_doc_id']:
+                    self.new_doc_ids[t] = self.document_store[t][i]['new_doc_id']
 
     def set_index_doc_types(self):
         for i in self.document_store:
@@ -56,7 +61,6 @@ class Indexer:
         try:
             if shard_ds[doc_id]['is_deleted'] is False:
                 shard_ds[doc_id]['is_deleted'] = True
-                self.num_docs -= 1
                 self.del_docs.append([doc_type, doc_id])
                 log.info(str(doc_id) + ' deleted')
             else:
@@ -76,22 +80,16 @@ class Indexer:
     def add(self, doc_type, doc, isUpdate=False):
         if doc_type not in self.index_doc_type:
             self.document_store[doc_type] = [dict() for x in range(self.number_of_shards)]
-            for field in self.mapping[doc_type]:
-                if self.mapping[doc_type][field].get('index', True):
-                    self.tfTable[doc_type] = [AutoVivification() for x in range(self.number_of_shards)] # defaultdict(lambda: defaultdict(list))
+            self.tfTable[doc_type] = [AutoVivification() for x in range(self.number_of_shards)] # defaultdict(lambda: defaultdict(list))
             self.index_doc_type.add(doc_type)
         if isUpdate is False:
-            self.new_doc_id += 1
-            self.num_docs += 1
-            doc['doc_id'] = self.new_doc_id
+            self.new_doc_ids[doc_type] += 1
+            doc['doc_id'] = self.new_doc_ids
             doc['is_deleted'] = False
         flattened = self.flattener.flatten(doc_type, doc)
         inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
         self.generate(doc['doc_id'], doc_type, doc, inverted_index)
         log.info(str(doc['doc_id']) + ' added')
-        # if self.num_docs % 1000 == 0:
-        #     self.flush_to_file()
-        #     print('flushed to file')
         self.future_flush()
         return doc
 
@@ -125,7 +123,7 @@ class Indexer:
             ds_type['num_docs'] += 1
         except:
             ds_type['num_docs'] = 1
-
+        ds_type['new_doc_id'] = doc_id
         ds_type[doc_id] = doc
 
     def get_doc(self, doc_type, doc_id):
@@ -159,11 +157,10 @@ class Indexer:
     def degenerate_doc_store(self, doc_id, doc_type, doc):
         shard_ds = self.document_store[doc_type][self.generate_shard_number(doc_id)]
         try:
-            if shard_ds[doc_id]:
-                del shard_ds[doc_id]
-                shard_ds['num_docs'] -= 1
-                if shard_ds['num_docs'] == 0:
-                    del shard_ds['num_docs']
+            del shard_ds[doc_id]
+            shard_ds['num_docs'] -= 1
+            if shard_ds['num_docs'] == 0:
+                del shard_ds['num_docs']
         except:
             pass
 

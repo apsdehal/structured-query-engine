@@ -1,5 +1,6 @@
 import os
 import json
+from collections import defaultdict
 from helpers.utils.Compressor import Compressor
 
 compressor = Compressor()
@@ -26,15 +27,10 @@ def getAnalyzer(analyzer_type="standard"):
 
 def loadDocStoreAndInvertedIndex(index_name, num_shards, config, mapping):
     indices_path = config["indices_path"]
-    inverted_indices = AutoVivification()
-    document_stores = AutoVivification()
+    inverted_indices = defaultdict(list) 
+    document_stores = ddefaultict(list) 
 
     for type_name in mapping:
-        if type_name not in inverted_indices:
-            inverted_indices[type_name] = []
-
-        if type_name not in document_stores:
-            document_stores[type_name] = []
 
         file_path = os.path.join(indices_path, index_name)
 
