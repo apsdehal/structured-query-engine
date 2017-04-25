@@ -8,6 +8,8 @@ from indexer.Flattener import Flattener
 from indexer.Tokenizer import Tokenizer
 from helpers.utils.Compressor import Compressor
 from helpers.utils.General import AutoVivification, loadDocStoreAndInvertedIndex
+from helpers.utils.Debounce import Debounce
+from concurrent.futures import ProcessPoolExecutor
 
 log = logging.getLogger(__name__)
 
@@ -29,17 +31,6 @@ class Indexer:
         self.number_of_shards = config["indices"][index]["settings"]["index"]["number_of_shards"]
         self.tfTable = AutoVivification()
         self.document_store, self.tfTable = loadDocStoreAndInvertedIndex(index, self.number_of_shards, config, self.mapping)
-        print(self.document_store)
-
-    def __enter__(self):
-        log.info('in enter')
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.flush_to_file()
-        with open(self.index, 'wb') as f:
-            pickle.dump(self.__dict__, f, pickle.HIGHEST_PROTOCOL)
-        log.info('in exit')
 
     def update(self, doc_type, doc_id, doc):
         if type(doc_id) != int:
@@ -76,6 +67,10 @@ class Indexer:
 
         return True
 
+    def future_flush(self):
+        with ProcessPoolExecutor() as executor:
+            executor.submit(self.flush_to_file())
+
     def add(self, doc_type, doc, isUpdate=False):
         if doc_type not in self.index_doc_type:
             self.document_store[doc_type] = [dict() for x in range(self.number_of_shards)]
@@ -95,6 +90,7 @@ class Indexer:
         # if self.num_docs % 1000 == 0:
         #     self.flush_to_file()
         #     print('flushed to file')
+        self.future_flush()
         return doc
 
     def generate(self,doc_id, doc_type, doc, ii):
@@ -165,6 +161,7 @@ class Indexer:
         if shard_ds['num_docs'] == 0:
             del shard_ds['num_docs']
 
+    @Debounce(seconds=10)
     def flush_to_file(self):
         self.degenerate()
         for i in self.tfTable:

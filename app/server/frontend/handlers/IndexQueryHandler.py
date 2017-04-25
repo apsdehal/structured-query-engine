@@ -36,7 +36,6 @@ class IndexQueryHandler(tornado.web.RequestHandler):
 
         doc_saved = self.indexers[index_name].add(type_name, doc)
         self.write(json.dumps(doc_saved))
-        self.indexers[index_name].flush_to_file()
 
     def put(self, index_name, type_name, doc_id):
         doc = json.loads(self.request.body)
