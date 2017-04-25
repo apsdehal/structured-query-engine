@@ -42,11 +42,12 @@ class Indexer:
             self.index_doc_type.add(i)
 
     def update(self, doc_type, doc_id, doc):
+        str_doc_id = str(doc_id)
         flattened = self.flattener.flatten(doc_type, doc)
         inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
-        self.degenerate_inverted_index(doc_id, doc_type, inverted_index)
-        self.degenerate_doc_store(doc_id, doc_type, doc)
-        doc['doc_id'] = doc_id
+        self.degenerate_inverted_index(str_doc_id, doc_type, inverted_index)
+        self.degenerate_doc_store(str_doc_id, doc_type, doc)
+        doc['doc_id'] = str_doc_id
         doc['is_deleted'] = False
         doc_updated = self.add(doc_type, doc, True)
         log.info(str(doc_id) + ' updated')
@@ -54,15 +55,16 @@ class Indexer:
         return doc_updated
 
     def delete(self, doc_type, doc_id):
+        str_doc_id = str(doc_id)
         if doc_type not in self.index_doc_type:
             log.info('Invalid doc_type')
             return False
         shard_ds = self.document_store[doc_type][self.generate_shard_number(doc_id)]
         try:
-            if shard_ds[doc_id]['is_deleted'] is False:
-                shard_ds[doc_id]['is_deleted'] = True
-                self.del_docs.append([doc_type, doc_id])
-                log.info(str(doc_id) + ' deleted')
+            if shard_ds[str_doc_id]['is_deleted'] is False:
+                shard_ds[str_doc_id]['is_deleted'] = True
+                self.del_docs.append([doc_type, str_doc_id])
+                log.info(str_doc_id + ' deleted')
             else:
                 log.info('Document already marked for deletion')
                 return False
@@ -80,7 +82,7 @@ class Indexer:
     def add(self, doc_type, doc, isUpdate=False):
         if doc_type not in self.index_doc_type:
             self.document_store[doc_type] = [dict() for x in range(self.number_of_shards)]
-            self.tfTable[doc_type] = [AutoVivification() for x in range(self.number_of_shards)] # defaultdict(lambda: defaultdict(list))
+            self.tfTable[doc_type] = [dict() for x in range(self.number_of_shards)]
             self.index_doc_type.add(doc_type)
         if isUpdate is False:
             self.new_doc_ids[doc_type] += 1
@@ -89,7 +91,7 @@ class Indexer:
         flattened = self.flattener.flatten(doc_type, doc)
         inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
         self.generate(doc['doc_id'], doc_type, doc, inverted_index)
-        log.info(str(doc['doc_id']) + ' added')
+        log.info(doc['doc_id'] + ' added')
         self.future_flush()
         return doc
 
@@ -109,8 +111,11 @@ class Indexer:
                 if all(isinstance(elem, list) for elem in type_field):
                     type_field = [item for sublist in type_field for item in sublist]
                 dictionary = Counter(type_field)
-                field_tf = self.tfTable[doc_type][self.generate_shard_number(doc_id)][field]
+                field_tf = self.tfTable[doc_type][self.generate_shard_number(doc_id)].get(field, dict())
+                if not field_tf:
+                    self.tfTable[doc_type][self.generate_shard_number(doc_id)][field] = field_tf
                 for key in dictionary:
+                    field_tf[key] = field_tf.get(key,dict())
                     try:
                         field_tf[key]['num_docs'] += 1
                     except:
@@ -124,10 +129,17 @@ class Indexer:
         except:
             ds_type['num_docs'] = 1
         ds_type['new_doc_id'] = int(doc_id)
-        ds_type[str(doc_id)] = doc
+        ds_type[doc_id] = doc
 
     def get_doc(self, doc_type, doc_id):
-        return self.document_store[doc_type][self.generate_shard_number(doc_id)].get(doc_id, {})
+        doc = self.document_store[doc_type][self.generate_shard_number(doc_id)].get(doc_id, dict())
+        try:
+            if doc['is_deleted'] is False:
+                return doc
+            else:
+                return dict()
+        except:
+            return dict()
 
     def degenerate(self):
         for doc_type, doc_id in self.del_docs:
@@ -145,6 +157,7 @@ class Indexer:
                 if all(isinstance(elem, list) for elem in type_field):
                     type_field = [item for sublist in type_field for item in sublist]
                 dictionary = Counter(type_field)
+       
                 field_tf = self.tfTable[doc_type][self.generate_shard_number(doc_id)][field]
                 for key in dictionary:
                     del field_tf[key][doc_id]

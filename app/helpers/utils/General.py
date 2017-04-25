@@ -27,27 +27,25 @@ def getAnalyzer(analyzer_type="standard"):
 
 def loadDocStoreAndInvertedIndex(index_name, num_shards, config, mapping):
     indices_path = config["indices_path"]
-    inverted_indices = AutoVivification()
-    document_stores = AutoVivification()
+    inverted_indices = dict()
+    document_stores = dict()
 
     file_path = os.path.join(indices_path, index_name)
     if os.path.exists(file_path) and len(os.listdir(file_path)) > 1:
         for type_name in mapping:
-            if type_name not in inverted_indices:
-                inverted_indices[type_name] = []
+            inverted_indices[type_name] = [dict() for x in range(num_shards)]
 
-            if type_name not in document_stores:
-                document_stores[type_name] = []
+            document_stores[type_name] = [dict() for x in range(num_shards)]
 
             for i in range(num_shards):
                 type_file_path = "%s_%s_%s.tf" % (index_name, type_name, i)
                 type_file_path = os.path.join(file_path, type_file_path)
                 with open(type_file_path, "rb") as f:
-                    inverted_indices[type_name].append(json.loads(compressor.decompress(f.read()).decode()))
+                    inverted_indices[type_name][i] = json.loads(compressor.decompress(f.read()).decode())
 
                 type_file_path = "%s_%s_%s.ds" % (index_name, type_name, i)
                 type_file_path = os.path.join(file_path, type_file_path)
                 with open(type_file_path, "rb") as f:
-                    document_stores[type_name].append(json.loads(compressor.decompress(f.read()).decode()))
+                    document_stores[type_name][i] = json.loads(compressor.decompress(f.read()).decode())
 
     return document_stores, inverted_indices
