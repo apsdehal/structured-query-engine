@@ -84,7 +84,7 @@ class Indexer:
             self.index_doc_type.add(doc_type)
         if isUpdate is False:
             self.new_doc_ids[doc_type] += 1
-            doc['doc_id'] = self.new_doc_ids
+            doc['doc_id'] = str(self.new_doc_ids[doc_type])
             doc['is_deleted'] = False
         flattened = self.flattener.flatten(doc_type, doc)
         inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
@@ -123,8 +123,8 @@ class Indexer:
             ds_type['num_docs'] += 1
         except:
             ds_type['num_docs'] = 1
-        ds_type['new_doc_id'] = doc_id
-        ds_type[doc_id] = doc
+        ds_type['new_doc_id'] = int(doc_id)
+        ds_type[str(doc_id)] = doc
 
     def get_doc(self, doc_type, doc_id):
         return self.document_store[doc_type][self.generate_shard_number(doc_id)].get(doc_id, {})

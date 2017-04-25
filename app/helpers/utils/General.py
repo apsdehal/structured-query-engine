@@ -27,14 +27,18 @@ def getAnalyzer(analyzer_type="standard"):
 
 def loadDocStoreAndInvertedIndex(index_name, num_shards, config, mapping):
     indices_path = config["indices_path"]
-    inverted_indices = defaultdict(list) 
-    document_stores = ddefaultict(list) 
+    inverted_indices = AutoVivification()
+    document_stores = AutoVivification()
 
-    for type_name in mapping:
+    file_path = os.path.join(indices_path, index_name)
+    if os.path.exists(file_path) and len(os.listdir(file_path)) > 1:
+        for type_name in mapping:
+            if type_name not in inverted_indices:
+                inverted_indices[type_name] = []
 
-        file_path = os.path.join(indices_path, index_name)
+            if type_name not in document_stores:
+                document_stores[type_name] = []
 
-        if os.path.exists(file_path) and len(os.listdir(file_path)) > 1:
             for i in range(num_shards):
                 type_file_path = "%s_%s_%s.tf" % (index_name, type_name, i)
                 type_file_path = os.path.join(file_path, type_file_path)
