@@ -43,11 +43,14 @@ class Indexer:
 
     def update(self, doc_type, doc_id, doc):
         str_doc_id = str(doc_id)
-        old_doc = self.document_store[doc_type][self.generate_shard_number(doc_id)][doc_id]
-        flattened = self.flattener.flatten(doc_type, old_doc)
-        inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
-        self.degenerate_inverted_index(str_doc_id, doc_type, inverted_index)
-        self.degenerate_doc_store(str_doc_id, doc_type)
+        try:
+            old_doc = self.document_store[doc_type][self.generate_shard_number(doc_id)][str_doc_id]
+            flattened = self.flattener.flatten(doc_type, old_doc)
+            inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
+            self.degenerate_inverted_index(str_doc_id, doc_type, inverted_index)
+            self.degenerate_doc_store(str_doc_id, doc_type)
+        except:
+            pass
         doc['doc_id'] = str_doc_id
         doc['is_deleted'] = False
         doc_updated = self.add(doc_type, doc, True)
@@ -92,7 +95,8 @@ class Indexer:
         flattened = self.flattener.flatten(doc_type, doc)
         inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
         self.generate(doc['doc_id'], doc_type, doc, inverted_index)
-        log.info(doc['doc_id'] + ' added')
+        if isUpdate is False:
+            log.info(doc['doc_id'] + ' added')
         self.future_flush()
         return doc
 
@@ -114,13 +118,11 @@ class Indexer:
                 dictionary = Counter(type_field)
                 shard_tf = self.tfTable[doc_type][self.generate_shard_number(doc_id)]
                 shard_tf[field] = shard_tf.get(field, dict())
+                
                 for key in dictionary:
-                    shard_tf[field][key] = shard_tf[field].get(key,dict())
-                    try:
-                        shard_tf[field][key]['num_docs'] += 1
-                    except:
-                        shard_tf[field][key]['num_docs'] = 1
-                    shard_tf[field][key][doc_id] = dictionary[key]
+                    shard_tf[field][key] = shard_tf[field].get(key, [0, dict()])
+                    shard_tf[field][key][0] += 1
+                    shard_tf[field][key][1][doc_id] = dictionary[key]
 
     def generate_doc_store(self, doc_id, doc_type, doc):
         ds_type = self.document_store[doc_type][self.generate_shard_number(doc_id)]
@@ -160,12 +162,12 @@ class Indexer:
        
                 field_tf = self.tfTable[doc_type][self.generate_shard_number(doc_id)][field]
                 for key in dictionary:
-                    del field_tf[key][doc_id]
-                    field_tf[key]['num_docs'] -= 1
-                    if (field_tf[key]['num_docs'] == 0):
-                        del field_tf[key]
-                        if not field_tf:
-                            del field_tf
+                    del field_tf[key][1][doc_id]
+                    field_tf[key][0] -= 1
+                    if (field_tf[key][0] == 0):
+                            del field_tf[key]
+                            if not field_tf:
+                                del field_tf
 
     def degenerate_doc_store(self, doc_id, doc_type):
         shard_ds = self.document_store[doc_type][self.generate_shard_number(doc_id)]
