@@ -155,15 +155,15 @@ class Retreiver:
                 if token in query_vector:
                     continue
                 for i in range(self.number_of_shards):
-                    tf_dict = self.inverted_indices[type_name][i][field].get(token, {})
-
-                    if len(tf_dict) == 0:
+                    result = self.inverted_indices[type_name][i][field].get(token, {})
+                    if len(result) == 0:
                         continue
 
+                    num_docs, tf_dict = result
+
                     total_docs = float(self.doc_stores[type_name][i]['num_docs'])
-                    self.term_inv_doc_freq = math.log(total_docs / tf_dict['num_docs'])
+                    self.term_inv_doc_freq = math.log(total_docs / num_docs)
                     query_vector[token] = 1.0 * self.term_inv_doc_freq
-                    tf_dict.pop('num_docs', None)
 
                     for doc_id, freq in tf_dict.items():
                         if doc_id in document_vectors:
