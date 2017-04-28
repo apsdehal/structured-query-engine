@@ -33,6 +33,7 @@ class Retreiver:
         return result
 
     def process_query(self, data):
+        range_filter = None
         if self.TERM_QUERY in data:
             items = data[self.TERM_QUERY].items()
             if len(items) > 1:
@@ -56,7 +57,7 @@ class Retreiver:
             must_items = items.get('must', [])
             must_not_items = items.get('must_not', [])
             should_items = items.get('should', [])
-            range_items = items.get('range', [])
+            filter_dict = items.get('filter', {})
 
             # should query
             should_fields = []
@@ -86,7 +87,21 @@ class Retreiver:
                     must_fields.append(f)
                     must_field_querys.append(q)
 
-            # only implementing "should" for now
+            # filter query
+            range_items = filter_dict.get('range',{}).items()
+            if len(range_items) > 1:
+                raise Exception('[range] query doesnt support multiple fields')
+                return
+            if len(range_items) != 0:
+                [(range_query_field, q)] = range_items
+                lt = q.get('lt',sys.maxsize)
+                lte = q.get('lte',sys.maxsize)
+                gt = q.get('gt',-sys.maxsize)
+                gte = q.get('gte',-sys.maxsize)
+                range_filter = {range_query_field:{'lt': lt, 'lte': lte, 'gt': gt, 'gte': gte }}
+
+            # only implementing "should" and filter query for now
+            # filter query will only have range as parameter
             fields = []
             query_strings = []
             for f, q in zip(should_fields, should_field_querys):
@@ -97,9 +112,9 @@ class Retreiver:
         else:
             raise Exception('unknown query type')
             return
-        return fields, query_strings, query_type
+        return fields, query_strings, query_type, range_filter
 
-    def get_docs(self, posting_list, type_name):
+    def get_docs(self, posting_list, type_name, range_filter):
         results = {}
         sub_results = {}
         hits = []
@@ -115,6 +130,19 @@ class Retreiver:
             doc['_source'] = self.doc_stores[type_name][shard_num][doc_id]
             doc['_score'] = score
             doc['_id'] = doc_id
+
+            if range_filter != None:
+                [(range_field, conds)] = range_filter.items()
+                field_val_in_doc = doc['_source'][range_field]
+                if not field_val_in_doc <= conds['lte']:
+                    continue
+                if not field_val_in_doc < conds['lt']:
+                    continue
+                if not field_val_in_doc >= conds['gte']:
+                    continue
+                if not field_val_in_doc > conds['gt']:
+                    continue
+
             hits.append(doc)
             total_results += 1
 
@@ -133,7 +161,7 @@ class Retreiver:
             raise KeyError("invalid query, 'query' key not present in passed parameter")
             return
         try:
-            fields, query_strings, query_type = self.process_query(data)
+            fields, query_strings, query_type, range_filter = self.process_query(data)
         except TypeError:
             raise TypeError("Exception occured while processing query")
             return
@@ -185,4 +213,4 @@ class Retreiver:
 
         posting_list.sort(key=lambda tup: tup[1], reverse=True)
 
-        return self.get_docs(posting_list, type_name)
+        return self.get_docs(posting_list, type_name, range_filter)
