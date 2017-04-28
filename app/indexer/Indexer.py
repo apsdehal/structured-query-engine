@@ -135,13 +135,19 @@ class Indexer:
 
     def get_doc(self, doc_type, doc_id):
         doc = self.document_store[doc_type][self.generate_shard_number(doc_id)].get(doc_id, dict())
+        return_doc = {}
+        return_doc['_index'] = self.index
+        return_doc['_type'] = doc_type
+        return_doc['_source'] = {}
         try:
             if doc['is_deleted'] is False:
-                return doc
+                return_doc['_source'] = doc
+                return_doc['_id'] = doc_id
+                return return_doc
             else:
-                return dict()
+                return return_doc
         except:
-            return dict()
+            return return_doc
 
     def degenerate(self):
         for doc_type, doc_id in self.del_docs:
