@@ -11,7 +11,6 @@ class Retreiver:
         self.TERM_QUERY = 'term'
         self.MATCH_QUERY = 'match'
         self.BOOL_QUERY = 'bool'
-        self.NUM_RESULTS_TO_RETURN = 10
         self.index_name = index_name
         self.config = config
         self.mapping = config['indices'][index_name]["mappings"]
@@ -105,9 +104,9 @@ class Retreiver:
         sub_results = {}
         hits = []
         max_score = -1
-        total_results = min(self.NUM_RESULTS_TO_RETURN, len(posting_list))
+        total_results = 0
 
-        for doc_id, score in posting_list[:self.NUM_RESULTS_TO_RETURN]:
+        for doc_id, score in posting_list[self.offset : self.offset + self.num_results]:
             max_score = max(score,max_score)
             shard_num = int(doc_id) % self.number_of_shards
             doc = {}
@@ -117,6 +116,7 @@ class Retreiver:
             doc['_score'] = score
             doc['_id'] = doc_id
             hits.append(doc)
+            total_results += 1
 
         sub_results['hits'] = hits
         sub_results['max_score'] = max_score
@@ -124,7 +124,9 @@ class Retreiver:
         results['hits'] = sub_results
         return results
 
-    def query(self, type_name, q):
+    def query(self, type_name, q, optional_args={}):
+        self.num_results = optional_args.get('num_results', 10)
+        self.offset = optional_args.get('offset', 0)
         try:
             data = q['query']
         except KeyError:
