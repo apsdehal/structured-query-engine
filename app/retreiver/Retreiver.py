@@ -53,7 +53,7 @@ class Retreiver:
             query_strings = [q]
             query_type = self.MATCH_QUERY
         elif self.BOOL_QUERY in data:
-            items = data[self.BOOL_QUERY].items()
+            items = data[self.BOOL_QUERY]
             must_items = items.get('must', [])
             must_not_items = items.get('must_not', [])
             should_items = items.get('should', [])
