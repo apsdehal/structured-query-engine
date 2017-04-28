@@ -155,6 +155,7 @@ class Retreiver:
     def query(self, type_name, q, optional_args={}):
         self.num_results = optional_args.get('num_results', 10)
         self.offset = optional_args.get('offset', 0)
+        print(q)
         try:
             data = q['query']
         except KeyError:
@@ -167,6 +168,7 @@ class Retreiver:
             return
 
         scores = {}
+        posting_list = []
 
         for field, query_string in zip(fields, query_strings):
             if query_type == self.TERM_QUERY:
@@ -178,7 +180,6 @@ class Retreiver:
 
             query_vector = {}
             document_vectors = {}
-            posting_list = []
 
             for token in query_tokens:
                 # if query contains a word twice then it will be ignored second time
