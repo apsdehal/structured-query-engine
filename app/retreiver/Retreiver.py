@@ -156,8 +156,8 @@ class Retreiver:
         return results
 
     def query(self, type_name, q, optional_args={}):
-        self.num_results = optional_args.get('num_results', 10)
-        self.offset = optional_args.get('offset', 0)
+        self.num_results = q.get('size', 10)
+        self.offset = q.get('from', 0)
         # print(q)
         try:
             data = q['query']
