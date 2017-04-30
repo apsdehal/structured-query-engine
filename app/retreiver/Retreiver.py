@@ -155,7 +155,7 @@ class Retreiver:
     def query(self, type_name, q, optional_args={}):
         self.num_results = optional_args.get('num_results', 10)
         self.offset = optional_args.get('offset', 0)
-        print(q)
+        # print(q)
         try:
             data = q['query']
         except KeyError:
