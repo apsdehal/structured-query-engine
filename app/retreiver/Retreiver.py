@@ -182,12 +182,16 @@ class Retreiver:
         posting_list = []
 
         for field, query_string in zip(fields, query_strings):
-            if query_type == self.TERM_QUERY:
-                query_tokens = [query_string.lower()]
+            field_type = field, self.mapping[type_name][field]['type']
+            if field_type == 'text':
+                if query_type == self.TERM_QUERY:
+                    query_tokens = [query_string.lower()]
+                else:
+                    analyzer_type = self.mapping[type_name][field].get('analyzer', self.STANDARD_ANALYZER)
+                    analyzer = utils.getAnalyzer(analyzer_type)
+                    query_tokens = analyzer.analyze(query_string)
             else:
-                analyzer_type = self.mapping[type_name][field].get('analyzer', self.STANDARD_ANALYZER)
-                analyzer = utils.getAnalyzer(analyzer_type)
-                query_tokens = analyzer.analyze(query_string)
+                query_tokens = [query_string]
 
             query_vector = {}
             document_vectors = {}
