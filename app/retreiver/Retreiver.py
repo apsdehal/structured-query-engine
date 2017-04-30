@@ -121,18 +121,13 @@ class Retreiver:
         hits = []
         max_score = -1
         total_results = 0
+        filtered_posting_list = []
 
-        for doc_id, score in posting_list[self.offset : ]:
-            max_score = max(score,max_score)
-            shard_num = int(doc_id) % self.number_of_shards
-            doc = {}
-            doc['_index'] = self.index_name
-            doc['_type'] = type_name
-            doc['_source'] = self.doc_stores[type_name][shard_num][doc_id]
-            doc['_score'] = score
-            doc['_id'] = doc_id
+        if range_filter != None:
+            for doc_id, score in posting_list:
+                shard_num = int(doc_id) % self.number_of_shards
+                doc = {'_source': self.doc_stores[type_name][shard_num][doc_id] }
 
-            if range_filter != None:
                 [(range_field, conds)] = range_filter.items()
                 field_val_in_doc = float(doc['_source'][range_field])
                 if not field_val_in_doc <= conds['lte']:
@@ -143,6 +138,19 @@ class Retreiver:
                     continue
                 if not field_val_in_doc > conds['gt']:
                     continue
+                filtered_posting_list.append((doc_id, score))
+        else:
+            filtered_posting_list = posting_list
+
+        for doc_id, score in filtered_posting_list[self.offset : ]:
+            max_score = max(score,max_score)
+            shard_num = int(doc_id) % self.number_of_shards
+            doc = {}
+            doc['_index'] = self.index_name
+            doc['_type'] = type_name
+            doc['_source'] = self.doc_stores[type_name][shard_num][doc_id]
+            doc['_score'] = score
+            doc['_id'] = doc_id
 
             hits.append(doc)
             total_results += 1
@@ -151,7 +159,7 @@ class Retreiver:
 
         sub_results['hits'] = hits
         sub_results['max_score'] = max_score
-        sub_results['total'] = total_results
+        sub_results['total'] = len(filtered_posting_list)
         results['hits'] = sub_results
         return results
 
