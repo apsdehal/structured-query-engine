@@ -3,6 +3,7 @@ import helpers.utils.General as utils
 import requests
 import math
 from indexer.Flattener import Flattener
+import sys
 
 
 class Retreiver:
@@ -121,7 +122,7 @@ class Retreiver:
         max_score = -1
         total_results = 0
 
-        for doc_id, score in posting_list[self.offset : self.offset + self.num_results]:
+        for doc_id, score in posting_list[self.offset : ]:
             max_score = max(score,max_score)
             shard_num = int(doc_id) % self.number_of_shards
             doc = {}
@@ -133,7 +134,7 @@ class Retreiver:
 
             if range_filter != None:
                 [(range_field, conds)] = range_filter.items()
-                field_val_in_doc = doc['_source'][range_field]
+                field_val_in_doc = float(doc['_source'][range_field])
                 if not field_val_in_doc <= conds['lte']:
                     continue
                 if not field_val_in_doc < conds['lt']:
@@ -145,6 +146,8 @@ class Retreiver:
 
             hits.append(doc)
             total_results += 1
+            if total_results == self.num_results:
+                break
 
         sub_results['hits'] = hits
         sub_results['max_score'] = max_score
