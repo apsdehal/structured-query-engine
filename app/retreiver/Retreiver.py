@@ -95,10 +95,10 @@ class Retreiver:
                 return
             if len(range_items) != 0:
                 [(range_query_field, q)] = range_items
-                lt = q.get('lt',sys.maxsize)
-                lte = q.get('lte',sys.maxsize)
-                gt = q.get('gt',-sys.maxsize)
-                gte = q.get('gte',-sys.maxsize)
+                lt = float(q.get('lt',sys.maxsize))
+                lte = float(q.get('lte',sys.maxsize))
+                gt = float(q.get('gt',-sys.maxsize))
+                gte = float(q.get('gte',-sys.maxsize))
                 range_filter = {range_query_field:{'lt': lt, 'lte': lte, 'gt': gt, 'gte': gte }}
 
             # only implementing "should" and filter query for now
