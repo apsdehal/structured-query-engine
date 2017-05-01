@@ -1,5 +1,7 @@
 """
 N-gram Analyzer
+Generate ngrams based on min (3) and max len (query_length) and return them
+Currently doesn't support config for min and max len
 """
 import nltk
 from nltk.util import ngrams

@@ -10,9 +10,15 @@ def getAnalyzer(analyzer_type="standard"):
     if analyzer_type == "standard":
         from helpers.analyzers import StandardAnalyzer
         analyzer = StandardAnalyzer.StandardAnalyzer()
-    if analyzer_type == "n_gram":
+    elif analyzer_type == "n_gram":
         from helpers.analyzers import NgramAnalyzer
         analyzer = NgramAnalyzer.NgramAnalyzer()
+    elif analyzer_type == "whitespace":
+        from helpers.analyzers import WhitespaceAnalyzer
+        analyzer = WhitespaceAnalyzer.WhitespaceAnalyzer()
+    elif analyzer_type == "simple":
+        from helpers.analyzers import SimpleAnalyzer
+        analyzer = SimpleAnalyzer.SimpleAnalyzer()
     return analyzer
 
 
