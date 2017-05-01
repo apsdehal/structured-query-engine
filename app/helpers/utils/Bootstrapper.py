@@ -35,6 +35,7 @@ class Bootstrapper:
             general_config["cluster_uuid"] = uuid.uuid4().hex
             general_config["base_port"] = BASE_PORT
             general_config["base_url"] = "http://localhost"
+            general_config["bind_address"] = "127.0.0.1"
             with open(config_path, "w+") as c:
                 c.write(json.dumps(general_config))
         else:

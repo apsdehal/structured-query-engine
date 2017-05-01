@@ -11,6 +11,7 @@ log = logging.getLogger(__name__)
 
 def start(config):
     SERVER_PORT = config["base_port"]
+    SERVER_BIND_ADDRESS = config["bind_address"]
     task_id = process.fork_processes(None)
     config = {
         "config": config
@@ -24,6 +25,6 @@ def start(config):
     ])
 
     http_server = httpserver.HTTPServer(application)
-    http_server.add_sockets(netutil.bind_sockets(SERVER_PORT + task_id))
+    http_server.add_sockets(netutil.bind_sockets(SERVER_PORT + task_id, address=SERVER_BIND_ADDRESS))
     log.info("Frontend listening on %d", SERVER_PORT + task_id)
     IOLoop.current().start()
