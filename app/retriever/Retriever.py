@@ -199,7 +199,10 @@ class Retriever:
                 if query_type == self.TERM_QUERY:
                     query_tokens = [query_string.lower()]
                 else:
-                    analyzer_type = self.mapping[type_name][field].get('analyzer', self.STANDARD_ANALYZER)
+                    analyzer_type = self.mapping[type_name][field].get('search_analyzer', None)
+                    if not analyzer_type:
+                        analyzer_type = self.mapping[type_name][field].get('analyzer', self.STANDARD_ANALYZER)
+
                     analyzer = utils.getAnalyzer(analyzer_type)
                     query_tokens = analyzer.analyze(query_string)
             else:
