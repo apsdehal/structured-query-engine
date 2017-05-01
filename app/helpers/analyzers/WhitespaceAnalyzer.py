@@ -1,5 +1,6 @@
 """
 Whitespace Analyzer
+Use analyzer: "whitespace" in mapping
 """
 
 from . import BaseAnalyzer

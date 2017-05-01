@@ -2,6 +2,8 @@
 N-gram Analyzer
 Generate ngrams based on min (3) and max len (query_length) and return them
 Currently doesn't support config for min and max len
+
+Use analyzer: "n_gram" in mapping
 """
 import nltk
 from nltk.util import ngrams
@@ -16,18 +18,18 @@ class NgramAnalyzer(BaseAnalyzer.BaseAnalyzer):
 
     def n_grams(self, query):
         terms = super().analyze(query)
-        for term in terms:
-            for n in range(len(term)):
-                terms.append(term[:n])
         min_len = 3
-        max_len = max(4,len(query)+1)
-        for n in range(min_len, max_len):
-            for ngram in ngrams(query, n):
-                if ngram:
-                    terms.append(''.join(str(i) for i in ngram))
-        for n in range(len(query)):
-            terms.append(query[:n])
-        return terms
+        final_ngrams = set()
+        for term in terms:
+            max_len = max(4, len(term) + 1)
+            for n in range(min_len, max_len):
+                col = ngrams(list(term), n)
+                for ngram in col:
+                    ngram = "".join(ngram)
+                    if len(ngram):
+                        final_ngrams.add(ngram)
+
+        return list(final_ngrams)
 
     def analyze(self, query):
         query = query.lower().strip()

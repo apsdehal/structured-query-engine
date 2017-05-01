@@ -1,5 +1,7 @@
 """
 Standard Analyzer
+
+Use analyzer: "standard" in mapping or leave empty
 """
 
 from . import BaseAnalyzer

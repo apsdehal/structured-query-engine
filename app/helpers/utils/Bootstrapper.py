@@ -48,7 +48,11 @@ class Bootstrapper:
         config["retrievers"] = {}
 
         for index in config["indices"]:
-            config["indexers"][index] = Indexer(config, index)
-            config["retrievers"][index] = Retriever(config, index)
+            file_list = os.path.join(indices_path, index)
+            file_list = os.listdir(file_list)
+
+            if len(file_list) > 1:
+                config["indexers"][index] = Indexer(config, index)
+                config["retrievers"][index] = Retriever(config, index)
 
         return config

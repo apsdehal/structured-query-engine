@@ -2,6 +2,8 @@
 Simple Analyzer
 
 Takes in a string a splits it whenever it finds a non character word
+
+Use analyzer: "simple" in mapping
 """
 
 from . import BaseAnalyzer
