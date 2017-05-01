@@ -12,7 +12,7 @@ import shutil
 from tornado.httpclient import AsyncHTTPClient
 from tornado import gen, process, escape
 from indexer.Indexer import Indexer
-from retreiver.Retreiver import Retreiver
+from retriever.Retriever import Retriever
 
 
 class IndexHandler(tornado.web.RequestHandler):
@@ -82,7 +82,7 @@ class IndexHandler(tornado.web.RequestHandler):
             f.write(json.dumps(info))
         self.config["indices"][index_name] = info
         self.config["indexers"][index_name] = Indexer(self.config, index_name)
-        self.config["retreivers"][index_name] = Retreiver(self.config, index_name)
+        self.config["retrievers"][index_name] = Retriever(self.config, index_name)
         self.write(json.dumps({"acknowledged": True}))
 
     def delete(self):

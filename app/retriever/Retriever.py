@@ -6,7 +6,7 @@ from indexer.Flattener import Flattener
 import sys
 
 
-class Retreiver:
+class Retriever:
     def __init__(self, config, index_name):
         self.STANDARD_ANALYZER = 'standard'
         self.TERM_QUERY = 'term'

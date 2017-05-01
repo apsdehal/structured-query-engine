@@ -3,7 +3,7 @@ import tornado.web
 import socket
 import logging
 import json
-from retreiver.Retreiver import Retreiver
+from retriever.Retriever import Retriever
 from indexer.Indexer import Indexer
 from tornado.httpclient import AsyncHTTPClient
 from tornado import gen, process, escape
@@ -13,7 +13,7 @@ class IndexQueryHandler(tornado.web.RequestHandler):
     def initialize(self, config):
         self.config = config["config"]
         self.indexers = self.config["indexers"]
-        self.retreivers = self.config["retreivers"]
+        self.retrievers = self.config["retrievers"]
 
     def get(self, index_name, type_name, search_param):
         if search_param != "_search":
@@ -23,9 +23,9 @@ class IndexQueryHandler(tornado.web.RequestHandler):
             return
 
         body = escape.json_decode(self.request.body.decode('utf-8'))
-        if index_name not in self.retreivers:
-            self.retreivers[index_name] = Retreiver(self.config, index_name)
-        response = self.retreivers[index_name].query(type_name, body)
+        if index_name not in self.retrievers:
+            self.retrievers[index_name] = Retriever(self.config, index_name)
+        response = self.retrievers[index_name].query(type_name, body)
         self.write(response)
 
     def post(self, index_name, type_name, search_param=None):

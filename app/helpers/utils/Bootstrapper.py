@@ -3,7 +3,7 @@ import json
 import uuid
 
 from indexer.Indexer import Indexer
-from retreiver.Retreiver import Retreiver
+from retriever.Retriever import Retriever
 
 
 class Bootstrapper:
@@ -45,10 +45,10 @@ class Bootstrapper:
         config["name"] = uuid.uuid4().hex
         config.update(general_config)
         config["indexers"] = {}
-        config["retreivers"] = {}
+        config["retrievers"] = {}
 
         for index in config["indices"]:
             config["indexers"][index] = Indexer(config, index)
-            config["retreivers"][index] = Retreiver(config, index)
+            config["retrievers"][index] = Retriever(config, index)
 
         return config
