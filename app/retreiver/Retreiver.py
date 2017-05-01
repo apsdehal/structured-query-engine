@@ -182,7 +182,7 @@ class Retreiver:
         posting_list = []
 
         for field, query_string in zip(fields, query_strings):
-            field_type = field, self.mapping[type_name][field]['type']
+            field_type = self.mapping[type_name][field]['type']
             if field_type == 'text':
                 if query_type == self.TERM_QUERY:
                     query_tokens = [query_string.lower()]
