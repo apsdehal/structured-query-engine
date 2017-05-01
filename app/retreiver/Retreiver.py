@@ -33,8 +33,18 @@ class Retreiver:
             result = result + value * vector2.get(key, 0)
         return result
 
+    def process_should_query(self, should_item):
+        boost = 1
+        [(f, q)] = should_item.items()
+        if type(q) is dict:
+            boost = float(q.get('boost',1))
+            q = q.get('query','')
+
+        return f, q, boost
+
     def process_query(self, data):
         range_filter = None
+        weights = []
         if self.TERM_QUERY in data:
             items = data[self.TERM_QUERY].items()
             if len(items) > 1:
@@ -44,6 +54,7 @@ class Retreiver:
             fields = [f]
             query_strings = [q]
             query_type = self.TERM_QUERY
+            weights = [1.0]
         elif self.MATCH_QUERY in data:
             items = data[self.MATCH_QUERY].items()
             if len(items) > 1:
@@ -53,6 +64,7 @@ class Retreiver:
             fields = [f]
             query_strings = [q]
             query_type = self.MATCH_QUERY
+            weights = [1.0]
         elif self.BOOL_QUERY in data:
             items = data[self.BOOL_QUERY]
             must_items = items.get('must', [])
@@ -63,6 +75,7 @@ class Retreiver:
             # should query
             should_fields = []
             should_field_querys = []
+            boost = []
             if len(should_items) == 0:
                 should_query = None
             else:
@@ -70,9 +83,10 @@ class Retreiver:
                     if len(should_item[self.MATCH_QUERY].items()) > 1:
                         raise Exception('[match] query doesnt support multiple fields')
                         return
-                    [(f, q)] = should_item[self.MATCH_QUERY].items()
+                    f, q, b = self.process_should_query(should_item[self.MATCH_QUERY])
                     should_fields.append(f)
                     should_field_querys.append(q)
+                    boost.append(b)
 
             # must query
             must_fields = []
@@ -103,17 +117,15 @@ class Retreiver:
 
             # only implementing "should" and filter query for now
             # filter query will only have range as parameter
-            fields = []
-            query_strings = []
-            for f, q in zip(should_fields, should_field_querys):
-                fields.append(f)
-                query_strings.append(q)
+            fields = should_fields
+            query_strings = should_field_querys
+            weights = boost
 
             query_type = self.BOOL_QUERY
         else:
             raise Exception('unknown query type')
             return
-        return fields, query_strings, query_type, range_filter
+        return fields, query_strings, weights, query_type, range_filter
 
     def get_docs(self, posting_list, type_name, range_filter):
         results = {}
@@ -173,7 +185,7 @@ class Retreiver:
             raise KeyError("invalid query, 'query' key not present in passed parameter")
             return
         try:
-            fields, query_strings, query_type, range_filter = self.process_query(data)
+            fields, query_strings, weights, query_type, range_filter = self.process_query(data)
         except TypeError:
             raise TypeError("Exception occured while processing query")
             return
@@ -181,7 +193,7 @@ class Retreiver:
         scores = {}
         posting_list = []
 
-        for field, query_string in zip(fields, query_strings):
+        for field, query_string, weight in zip(fields, query_strings, weights):
             field_type = self.mapping[type_name][field]['type']
             if field_type == 'text':
                 if query_type == self.TERM_QUERY:
@@ -209,7 +221,7 @@ class Retreiver:
 
                     total_docs = float(self.doc_stores[type_name][i]['num_docs'])
                     self.term_inv_doc_freq = math.log(total_docs / num_docs)
-                    query_vector[token] = 1.0 * self.term_inv_doc_freq
+                    query_vector[token] = weight * self.term_inv_doc_freq
 
                     for doc_id, freq in tf_dict.items():
                         if doc_id in document_vectors:
