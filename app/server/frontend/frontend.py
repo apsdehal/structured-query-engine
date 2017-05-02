@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 def start(config):
     SERVER_PORT = config["base_port"]
     SERVER_BIND_ADDRESS = config["bind_address"]
-    task_id = process.fork_processes(None)
+    task_id = process.fork_processes(4)
     config = {
         "config": config
     }
