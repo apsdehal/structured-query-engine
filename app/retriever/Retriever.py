@@ -70,7 +70,7 @@ class Retriever:
             must_items = items.get('must', [])
             must_not_items = items.get('must_not', [])
             should_items = items.get('should', [])
-            filter_dict = items.get('filter', {})
+            filter_items = items.get('filter', [])
 
             # should query
             should_fields = []
@@ -103,17 +103,19 @@ class Retriever:
                     must_field_querys.append(q)
 
             # filter query
-            range_items = filter_dict.get('range',{}).items()
-            if len(range_items) > 1:
-                raise Exception('[range] query doesnt support multiple fields')
-                return
-            if len(range_items) != 0:
-                [(range_query_field, q)] = range_items
-                lt = float(q.get('lt',sys.maxsize))
-                lte = float(q.get('lte',sys.maxsize))
-                gt = float(q.get('gt',-sys.maxsize))
-                gte = float(q.get('gte',-sys.maxsize))
-                range_filter = {range_query_field:{'lt': lt, 'lte': lte, 'gt': gt, 'gte': gte }}
+            if len(filter_items) > 0:
+                for filter_item in filter_items:
+                    range_items = filter_item.get('range',{}).items()
+                    if len(range_items) > 1:
+                        raise Exception('[range] query doesnt support multiple fields')
+                        return
+                    if len(range_items) != 0:
+                        [(range_query_field, q)] = range_items
+                        lt = float(q.get('lt',sys.maxsize))
+                        lte = float(q.get('lte',sys.maxsize))
+                        gt = float(q.get('gt',-sys.maxsize))
+                        gte = float(q.get('gte',-sys.maxsize))
+                        range_filter = {range_query_field:{'lt': lt, 'lte': lte, 'gt': gt, 'gte': gte }}
 
             # only implementing "should" and filter query for now
             # filter query will only have range as parameter
