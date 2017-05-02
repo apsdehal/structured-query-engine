@@ -43,7 +43,7 @@ class Retriever:
         return f, q, boost
 
     def process_query(self, data):
-        range_filter = None
+        range_filter = []
         weights = []
         if self.TERM_QUERY in data:
             items = data[self.TERM_QUERY].items()
@@ -115,7 +115,7 @@ class Retriever:
                         lte = float(q.get('lte',sys.maxsize))
                         gt = float(q.get('gt',-sys.maxsize))
                         gte = float(q.get('gte',-sys.maxsize))
-                        range_filter = {range_query_field:{'lt': lt, 'lte': lte, 'gt': gt, 'gte': gte }}
+                        range_filter.append({range_query_field:{'lt': lt, 'lte': lte, 'gt': gt, 'gte': gte }})
 
             # only implementing "should" and filter query for now
             # filter query will only have range as parameter
@@ -137,22 +137,29 @@ class Retriever:
         total_results = 0
         filtered_posting_list = []
 
-        if range_filter != None:
+        if len(range_filter) != 0:
             for doc_id, score in posting_list:
+                filter_out = False
                 shard_num = int(doc_id) % self.number_of_shards
                 doc = {'_source': self.doc_stores[type_name][shard_num][doc_id] }
 
-                [(range_field, conds)] = range_filter.items()
-                field_val_in_doc = float(doc['_source'][range_field])
-                if not field_val_in_doc <= conds['lte']:
-                    continue
-                if not field_val_in_doc < conds['lt']:
-                    continue
-                if not field_val_in_doc >= conds['gte']:
-                    continue
-                if not field_val_in_doc > conds['gt']:
-                    continue
-                filtered_posting_list.append((doc_id, score))
+                for _filter in range_filter:
+                    [(range_field, conds)] = _filter.items()
+                    field_val_in_doc = float(doc['_source'][range_field])
+                    if not field_val_in_doc <= conds['lte']:
+                        filter_out = True
+                        break
+                    if not field_val_in_doc < conds['lt']:
+                        filter_out = True
+                        break
+                    if not field_val_in_doc >= conds['gte']:
+                        filter_out = True
+                        break
+                    if not field_val_in_doc > conds['gt']:
+                        filter_out = True
+                        break
+                if not filter_out:
+                    filtered_posting_list.append((doc_id, score))
         else:
             filtered_posting_list = posting_list
 
