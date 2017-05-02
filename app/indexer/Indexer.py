@@ -49,14 +49,17 @@ class Indexer:
             inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
             self.degenerate_inverted_index(str_doc_id, doc_type, inverted_index)
             self.degenerate_doc_store(str_doc_id, doc_type)
+            flag = False
         except:
-            pass
-        doc['doc_id'] = str_doc_id
-        doc['is_deleted'] = False
-        doc_updated = self.add(doc_type, doc, True)
-        log.info(str_doc_id + ' updated')
+            old_doc = dict()
+            flag = True
+        new_doc = old_doc.copy()
+        new_doc.update(doc)
+        new_doc['doc_id'] = str_doc_id
+        new_doc['is_deleted'] = False
+        return_doc = self.add(doc_type, new_doc, flag)
         self.future_flush()
-        return doc_updated
+        return return_doc
 
     def delete(self, doc_type, doc_id):
         str_doc_id = str(doc_id)
@@ -83,22 +86,32 @@ class Indexer:
         with ProcessPoolExecutor() as executor:
             executor.submit(self.flush_to_file())
 
-    def add(self, doc_type, doc, isUpdate=False):
+    def add(self, doc_type, doc, gen_new_doc_id=True):
+        return_doc = dict()
+        return_doc['_index'] = self.index
+        return_doc['_type'] = doc_type
         if doc_type not in self.index_doc_type:
             self.document_store[doc_type] = [dict() for x in range(self.number_of_shards)]
             self.tfTable[doc_type] = [dict() for x in range(self.number_of_shards)]
             self.index_doc_type.add(doc_type)
-        if isUpdate is False:
+        if gen_new_doc_id is True:
             self.new_doc_ids[doc_type] += 1
             doc['doc_id'] = str(self.new_doc_ids[doc_type])
             doc['is_deleted'] = False
+        return_doc['_id'] = doc['doc_id']
         flattened = self.flattener.flatten(doc_type, doc)
         inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
         self.generate(doc['doc_id'], doc_type, doc, inverted_index)
-        if isUpdate is False:
-            log.info(doc['doc_id'] + ' added')
+        if gen_new_doc_id is True:
+            log.info(doc['doc_id'] + ' created')
+            return_doc['result'] = 'created'
+            return_doc['created'] = True
+        else:
+            log.info(doc['doc_id'] + ' updated')
+            return_doc['created'] = False
+            return_doc['result'] = 'updated'
         self.future_flush()
-        return doc
+        return return_doc
 
     def generate(self,doc_id, doc_type, doc, ii):
         self.generate_inverted_index(doc_id, doc_type, ii)
@@ -135,7 +148,7 @@ class Indexer:
 
     def get_doc(self, doc_type, doc_id):
         doc = self.document_store[doc_type][self.generate_shard_number(doc_id)].get(doc_id, dict())
-        return_doc = {}
+        return_doc = dict()
         return_doc['_index'] = self.index
         return_doc['_type'] = doc_type
         return_doc['_source'] = {}
