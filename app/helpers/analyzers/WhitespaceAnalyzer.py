@@ -1,5 +1,6 @@
 """
 Whitespace Analyzer
+Divides on whitespace and doesn't lowercase
 Use analyzer: "whitespace" in mapping
 """
 
@@ -12,5 +13,5 @@ class WhitespaceAnalyzer(BaseAnalyzer.BaseAnalyzer):
         super().__init__(config)
 
     def analyze(self, query):
-        query = query.lower().strip()
+        query = query.strip()
         return query.split(" ")
