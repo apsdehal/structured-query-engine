@@ -34,8 +34,11 @@ class Indexer:
         self.new_doc_ids = defaultdict(int)
         for t in self.document_store:
             for i in range(self.number_of_shards):
-                if self.new_doc_ids[t] < self.document_store[t][i]['new_doc_id']:
-                    self.new_doc_ids[t] = self.document_store[t][i]['new_doc_id']
+                try:
+                    if self.new_doc_ids[t] < self.document_store[t][i]['new_doc_id']:
+                        self.new_doc_ids[t] = self.document_store[t][i]['new_doc_id']
+                except:
+                    pass
 
     def set_index_doc_types(self):
         for i in self.document_store:
@@ -151,7 +154,7 @@ class Indexer:
         return_doc = dict()
         return_doc['_index'] = self.index
         return_doc['_type'] = doc_type
-        return_doc['_source'] = {}
+        return_doc['_source'] = dict()
         try:
             if doc['is_deleted'] is False:
                 return_doc['_source'] = doc
