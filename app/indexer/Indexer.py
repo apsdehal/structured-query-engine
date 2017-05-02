@@ -52,16 +52,20 @@ class Indexer:
             inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
             self.degenerate_inverted_index(str_doc_id, doc_type, inverted_index)
             self.degenerate_doc_store(str_doc_id, doc_type)
-            flag = False
+            isUpdate = True
         except:
             old_doc = dict()
-            flag = True
+            isUpdate = False
         new_doc = old_doc.copy()
         new_doc.update(doc)
         new_doc['doc_id'] = str_doc_id
         new_doc['is_deleted'] = False
-        return_doc = self.add(doc_type, new_doc, flag)
-        # self.future_flush()
+        return_doc = self.add(doc_type, new_doc, isUpdate, False)
+        if isUpdate:
+            log.info(doc['doc_id'] + ' updated')
+            return_doc['created'] = False
+            return_doc['result'] = 'updated'
+
         return return_doc
 
     def delete(self, doc_type, doc_id):
@@ -89,7 +93,7 @@ class Indexer:
         with ProcessPoolExecutor() as executor:
             executor.submit(self.flush_to_file())
 
-    def add(self, doc_type, doc, gen_new_doc_id=True):
+    def add(self, doc_type, doc, isUpdate=False, gen_new_doc_id=True):
         return_doc = dict()
         return_doc['_index'] = self.index
         return_doc['_type'] = doc_type
@@ -105,14 +109,10 @@ class Indexer:
         flattened = self.flattener.flatten(doc_type, doc)
         inverted_index = self.tokenizer.tokenizeFlattened(doc_type, flattened)
         self.generate(doc['doc_id'], doc_type, doc, inverted_index)
-        if gen_new_doc_id is True:
+        if isUpdate is False:
             log.info(doc['doc_id'] + ' created')
             return_doc['result'] = 'created'
             return_doc['created'] = True
-        else:
-            log.info(doc['doc_id'] + ' updated')
-            return_doc['created'] = False
-            return_doc['result'] = 'updated'
         self.future_flush()
         return return_doc
 
