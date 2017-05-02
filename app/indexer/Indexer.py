@@ -58,7 +58,7 @@ class Indexer:
         new_doc['doc_id'] = str_doc_id
         new_doc['is_deleted'] = False
         return_doc = self.add(doc_type, new_doc, flag)
-        self.future_flush()
+        # self.future_flush()
         return return_doc
 
     def delete(self, doc_type, doc_id):
