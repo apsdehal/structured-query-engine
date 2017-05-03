@@ -234,24 +234,37 @@ class Retriever:
                 # if query contains a word twice then it will be ignored second time
                 if token in query_vector:
                     continue
+
+                total_docs = 0.0
+                term_doc_freq = 0.0
+                is_term_present = False
+                for i in range(self.number_of_shards):
+                    total_docs += float(self.doc_stores[type_name][i]['num_docs'])
+                    result = self.inverted_indices[type_name][i][field].get(token, {})
+                    if len(result) == 0:
+                        continue
+                    is_term_present = True
+                    num_docs, tf_dict = result
+                    term_doc_freq += num_docs
+                if is_term_present:
+                    term_inv_doc_freq = math.log(total_docs / term_doc_freq)
+
+
                 for i in range(self.number_of_shards):
                     result = self.inverted_indices[type_name][i][field].get(token, {})
                     if len(result) == 0:
                         continue
 
-                    num_docs, tf_dict = result
-
-                    total_docs = float(self.doc_stores[type_name][i]['num_docs'])
-                    self.term_inv_doc_freq = math.log(total_docs / num_docs)
-                    query_vector[token] = weight * self.term_inv_doc_freq
+                    num_docs, tf_dict = result 
+                    query_vector[token] = weight * term_inv_doc_freq
 
                     for doc_id, freq in tf_dict.items():
                         if doc_id in document_vectors:
                             inner_dict = document_vectors[doc_id]
-                            inner_dict[token] = freq * self.term_inv_doc_freq
+                            inner_dict[token] = freq * term_inv_doc_freq
                         else:
                             inner_dict = {}
-                            inner_dict[token] = freq * self.term_inv_doc_freq
+                            inner_dict[token] = freq * term_inv_doc_freq
                             document_vectors[doc_id] = inner_dict
 
             for doc_id, document_vector in document_vectors.items():
