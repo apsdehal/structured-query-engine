@@ -18,18 +18,21 @@ class NgramAnalyzer(BaseAnalyzer.BaseAnalyzer):
 
     def n_grams(self, query):
         terms = super().analyze(query)
-        min_len = 3
-        final_ngrams = set()
+        final_ngrams = list()
         for term in terms:
-            max_len = max(4, len(term) + 1)
+            if len(term) > 2:
+                for n in range(3,len(term)+1):
+                    final_ngrams.append(term[:n])
+        min_len = 3
+        for term in terms:
+            max_len = max(4, len(term)+1)
             for n in range(min_len, max_len):
                 col = ngrams(list(term), n)
                 for ngram in col:
                     ngram = "".join(ngram)
                     if len(ngram):
-                        final_ngrams.add(ngram)
-
-        return list(final_ngrams)
+                        final_ngrams.append(ngram)
+        return final_ngrams
 
     def analyze(self, query):
         query = query.lower().strip()
