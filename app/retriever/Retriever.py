@@ -1,8 +1,8 @@
 import json
-import helpers.utils.General as utils
+import app.helpers.utils.General as utils
 import requests
 import math
-from indexer.Flattener import Flattener
+from app.indexer.Flattener import Flattener
 import sys
 
 

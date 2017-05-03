@@ -4,11 +4,11 @@ import os
 import logging
 from collections import Counter
 from collections import defaultdict
-from indexer.Flattener import Flattener
-from indexer.Tokenizer import Tokenizer
-from helpers.utils.Compressor import Compressor
-from helpers.utils.General import loadDocStoreAndInvertedIndex
-from helpers.utils.Debounce import Debounce
+from app.indexer.Flattener import Flattener
+from app.indexer.Tokenizer import Tokenizer
+from app.helpers.utils.Compressor import Compressor
+from app.helpers.utils.General import loadDocStoreAndInvertedIndex
+from app.helpers.utils.Debounce import Debounce
 from concurrent.futures import ProcessPoolExecutor
 
 log = logging.getLogger(__name__)

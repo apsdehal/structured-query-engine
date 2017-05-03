@@ -2,8 +2,8 @@ import os
 import json
 import uuid
 
-from indexer.Indexer import Indexer
-from retriever.Retriever import Retriever
+from app.indexer.Indexer import Indexer
+from app.retriever.Retriever import Retriever
 
 
 class Bootstrapper:

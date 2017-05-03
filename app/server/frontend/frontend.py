@@ -1,8 +1,8 @@
 from tornado.ioloop import IOLoop
 from tornado import web, httpserver, process, netutil
-from server.frontend.handlers.IndexHandler import IndexHandler
-from server.frontend.handlers.IndexQueryHandler import IndexQueryHandler
-from server.frontend.handlers.InfoHandler import InfoHandler
+from app.server.frontend.handlers.IndexHandler import IndexHandler
+from app.server.frontend.handlers.IndexQueryHandler import IndexQueryHandler
+from app.server.frontend.handlers.InfoHandler import InfoHandler
 
 import logging
 

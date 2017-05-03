@@ -11,8 +11,8 @@ import shutil
 
 from tornado.httpclient import AsyncHTTPClient
 from tornado import gen, process, escape
-from indexer.Indexer import Indexer
-from retriever.Retriever import Retriever
+from app.indexer.Indexer import Indexer
+from app.retriever.Retriever import Retriever
 
 
 class IndexHandler(tornado.web.RequestHandler):

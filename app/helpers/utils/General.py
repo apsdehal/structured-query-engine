@@ -1,23 +1,23 @@
 import os
 import json
-from helpers.utils.Compressor import Compressor
+from app.helpers.utils.Compressor import Compressor
 
 compressor = Compressor()
 
 
 def getAnalyzer(analyzer_type="standard"):
     analyzer_type = analyzer_type.lower()
-    from helpers.analyzers import StandardAnalyzer
+    from app.helpers.analyzers import StandardAnalyzer
     analyzer = StandardAnalyzer.StandardAnalyzer()
 
     if analyzer_type == "n_gram":
-        from helpers.analyzers import NgramAnalyzer
+        from app.helpers.analyzers import NgramAnalyzer
         analyzer = NgramAnalyzer.NgramAnalyzer()
     elif analyzer_type == "whitespace":
-        from helpers.analyzers import WhitespaceAnalyzer
+        from app.helpers.analyzers import WhitespaceAnalyzer
         analyzer = WhitespaceAnalyzer.WhitespaceAnalyzer()
     elif analyzer_type == "simple":
-        from helpers.analyzers import SimpleAnalyzer
+        from app.helpers.analyzers import SimpleAnalyzer
         analyzer = SimpleAnalyzer.SimpleAnalyzer()
     return analyzer
 

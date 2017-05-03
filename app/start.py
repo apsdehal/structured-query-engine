@@ -1,5 +1,5 @@
-from helpers.utils.Bootstrapper import Bootstrapper
-import server.frontend.frontend as frontend
+from app.helpers.utils.Bootstrapper import Bootstrapper
+import app.server.frontend.frontend as frontend
 import logging
 import os
 
